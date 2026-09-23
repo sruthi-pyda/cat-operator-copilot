@@ -153,10 +153,25 @@ class BehaviorResult:
     confidence: float
     observed_value: float
     expected_value: float
+    # UNIT CONTRACT: operator_residual and context_explained_component MUST be in the
+    # same units (both idle ratios). Never mix ratios with minutes or litres.
+    # Populated together in a single return statement — one cannot be set without the other.
     operator_residual: float
     context_explained_component: float
     coaching_eligible: bool
     synthetic_flag: bool
+
+    def context_share(self) -> float:
+        """
+        Fraction of the total behavioural gap explained by context (0–1).
+        Used by the Training Hub gate:
+            if context_share > 0.5: do NOT trigger coaching
+        Returns 0.0 if both components are zero (insufficient evidence).
+        """
+        denom = abs(self.operator_residual) + abs(self.context_explained_component)
+        if denom < 1e-9:
+            return 0.0
+        return abs(self.context_explained_component) / denom
 
 
 @dataclass

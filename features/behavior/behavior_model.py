@@ -137,10 +137,28 @@ class BehaviorModel:
         expected_idle = np.clip(expected_idle, 0.02, 0.70)
 
         # ── Stage 2: observed - expected = residual ───────────────────────────
+        # UNIT CONTRACT (enforced): both values are idle RATIOS (dimensionless 0–1).
+        # operator_residual      = observed_idle_ratio - expected_idle
+        # context_explained      = expected_idle - population_mean_idle
+        # Both are in the same unit so the training gate ratio is meaningful:
+        #   context_share = |context_explained| / (|operator_residual| + |context_explained|)
+        # If context_explained is 0.0 while operator_residual is non-trivial,
+        # it means expected == pop_mean (edge case), NOT a missing value.
         operator_residual      = observed_idle_ratio - expected_idle
-        context_explained      = expected_idle - self.pop_mean_idle   # context's contribution
+        context_explained      = expected_idle - self.pop_mean_idle   # context's contribution (ratio)
         operator_residual_abs  = abs(operator_residual)
         z_score                = operator_residual / self.residual_std
+
+        # Guard: warn if context_explained is exactly 0 but operator_residual is significant.
+        # This would indicate expected == pop_mean, not a code bug, but worth flagging.
+        if context_explained == 0.0 and operator_residual_abs > RESIDUAL_CONTEXT_THRESHOLD:
+            import warnings
+            warnings.warn(
+                f"BehaviorModel: context_explained_component=0.0 while "
+                f"operator_residual={operator_residual_abs:.4f}. "
+                f"Verify expected_idle ({expected_idle:.4f}) != pop_mean ({self.pop_mean_idle:.4f}).",
+                stacklevel=2,
+            )
 
         # Fraction of total deviation that is operator-driven
         total_deviation = abs(observed_idle_ratio - operator_baseline_idle) + 1e-6
