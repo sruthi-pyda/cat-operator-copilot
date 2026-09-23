@@ -29,11 +29,13 @@ Passport supplies context to other features. It does **not** produce a standalon
 
 ## Step 2 — Biometric
 
-- [ ] `features/passport/biometric.py` — `register_operator()`, `identify()`
-- [ ] Registration: webcam frames → embedding under `data/face_registrations/` (gitignored); CSV stores the *path*, never the image
-- [ ] Login returns `{authenticated, operator_id, confidence}`; threshold from `config/settings.yaml`
-- [ ] Below threshold → no authorized session is created
-- [ ] Tests mock the recognition backend — no test may need a webcam
+- [x] `features/passport/biometric.py` — `register_operator()`, `identify()`
+- [x] Registration: webcam frames → embedding under `data/face_registrations/` (gitignored); CSV stores the *path*, never the image
+- [x] Login returns `{authenticated, operator_id, confidence}`; threshold from `config/settings.yaml`
+- [x] Below threshold → no authorized session is created
+- [x] Tests mock the recognition backend — no test needs a webcam
+- [x] `features/passport/registration.py` — webcam CLI (`register` / `login`)
+- [ ] **Needs the three of you present:** run `register` for OP1001, OP1002, OP1003 and calibrate the threshold against the real scores
 
 ## Step 3 — Training Hub
 
@@ -53,9 +55,18 @@ Passport supplies context to other features. It does **not** produce a standalon
 
 ## Step 5 — Task Planning Dashboard
 
-- [ ] `features/dashboard/adapters.py` — ports for `predict_task`, `evaluate_safety`, `analyze_behavior`, `generate_plan`, `route_event`; returns an explicit *unavailable* state when a teammate's module is absent (never fabricated numbers)
-- [ ] `app/ui/` Streamlit single shift home screen: operator/machine/authorization/state/safety · plan with reason for ordering · ETA P50 + range, fuel range, confidence · conditions · live operation with predicted-vs-actual and safety events · replan banner with cause · end-of-shift comparison
-- [ ] Dashboard calls the shared APIs; it does not import teammates' internal model logic
+- [x] `features/dashboard/adapters.py` — ports for `predict_task`, `evaluate_safety`, `analyze_behavior`, `generate_plan`, `route_event`; returns an explicit *unavailable* state when a teammate's module is absent (never fabricated numbers)
+- [x] `features/dashboard/data.py` — loads the tables and enforces the pre-task / outcome split
+- [x] `app/ui/dashboard.py` — Streamlit single shift home screen, verified in a browser
+- [x] Dashboard calls the shared APIs; it does not import teammates' internal model logic
+
+Run it:
+
+```
+PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -m streamlit run app/ui/dashboard.py --server.port 8502
+```
+
+Port 8502, not Streamlit's default 8501 — the data_repair project's app already uses 8501 on this machine (D029).
 
 ## Step 6 — Integration
 

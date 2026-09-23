@@ -257,4 +257,24 @@ git reset -q data/synthetic/
 
 ---
 
+## D029 — Dashboard runs on port 8502
+
+**Decision:** The Streamlit dashboard uses port 8502, not Streamlit's default 8501.
+
+```
+PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -m streamlit run app/ui/dashboard.py --server.port 8502
+```
+
+**Reason:** An unrelated Streamlit app already occupies 8501 on the development machine. Teammates on a clean machine can use either port; 8502 is what `.claude/launch.json` and the docs specify so everyone sees the same thing.
+
+---
+
+## D030 — Unintegrated features render a notice, never a placeholder
+
+**Decision:** When a teammate's feature is absent, the dashboard prints "Not integrated yet" with the owning member. It never shows a zero, a dash-with-units, or a sample number in a metric tile.
+
+**Reason:** A plausible-looking ETA is indistinguishable from a real one on screen, and during a demo nobody checks. An empty state is honest; a placeholder is a lie that looks like a result.
+
+---
+
 _Add new decisions here as they arise. Do not silently make assumptions._
