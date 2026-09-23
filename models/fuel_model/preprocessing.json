@@ -1,0 +1,78 @@
+{
+  "features": [
+    "soil_hardness_index",
+    "site_slope_deg",
+    "rain_mm",
+    "visibility_m",
+    "temperature_c",
+    "travel_distance_km",
+    "engine_load_pct",
+    "soil_moisture_pct",
+    "recent_idle_ratio",
+    "recent_load_ratio",
+    "recent_incident_count",
+    "years_experience",
+    "workload",
+    "machine_condition",
+    "congestion_level",
+    "task_type",
+    "task_phase",
+    "day_night"
+  ],
+  "categorical_features": [
+    "workload",
+    "machine_condition",
+    "congestion_level",
+    "task_type",
+    "task_phase",
+    "day_night"
+  ],
+  "numeric_features": [
+    "soil_hardness_index",
+    "site_slope_deg",
+    "rain_mm",
+    "visibility_m",
+    "temperature_c",
+    "travel_distance_km",
+    "engine_load_pct",
+    "soil_moisture_pct",
+    "recent_idle_ratio",
+    "recent_load_ratio",
+    "recent_incident_count",
+    "years_experience"
+  ],
+  "cat_maps": {
+    "workload": {
+      "heavy": 0,
+      "light": 1,
+      "medium": 2
+    },
+    "machine_condition": {
+      "fair": 0,
+      "good": 1,
+      "poor": 2
+    },
+    "congestion_level": {
+      "high": 0,
+      "low": 1,
+      "medium": 2
+    },
+    "task_type": {
+      "excavation": 0,
+      "grading": 1,
+      "hauling": 2,
+      "loading": 3,
+      "stockpiling": 4,
+      "trenching": 5
+    },
+    "task_phase": {
+      "active": 0,
+      "setup": 1,
+      "wrap_up": 2
+    },
+    "day_night": {
+      "day": 0,
+      "night": 1
+    }
+  }
+}

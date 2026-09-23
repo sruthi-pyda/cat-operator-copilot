@@ -55,6 +55,7 @@ class SiteContext:
     route: Optional[str] = None
     work_zone_constraints: Optional[str] = None
     haul_distance: Optional[float] = None
+    congestion: Optional[str] = None
 
 
 @dataclass

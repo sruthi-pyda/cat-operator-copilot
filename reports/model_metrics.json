@@ -1,0 +1,167 @@
+{
+  "model_honesty": {
+    "training_data": "synthetic",
+    "synthetic_flag": true,
+    "disclaimer": "All metrics are from synthetic data. Feature importance indicates predictive contribution, NOT causality. Never claim these models prove operator performance."
+  },
+  "eta_model": {
+    "target": "actual_task_duration_min",
+    "algorithm": "LightGBM",
+    "features_used": [
+      "soil_hardness_index",
+      "site_slope_deg",
+      "rain_mm",
+      "visibility_m",
+      "temperature_c",
+      "travel_distance_km",
+      "engine_load_pct",
+      "soil_moisture_pct",
+      "recent_idle_ratio",
+      "recent_load_ratio",
+      "recent_incident_count",
+      "years_experience",
+      "workload",
+      "machine_condition",
+      "congestion_level",
+      "task_type",
+      "task_phase",
+      "day_night"
+    ],
+    "forbidden_inputs": [
+      "actual_task_duration_min",
+      "actual_fuel_used_l"
+    ],
+    "train_samples": 4000,
+    "test_samples": 1000,
+    "split": "80/20 random stratified by seed=42",
+    "outputs": "P10, P50, P90 (quantile regression)",
+    "mae_minutes": 8.215,
+    "rmse_minutes": 12.975,
+    "baseline_mae_minutes": 31.675,
+    "improvement_over_baseline_pct": 74.1,
+    "p10_p90_coverage": 0.648,
+    "top_contributing_features": [
+      {
+        "feature": "visibility_m",
+        "importance": 1015.0
+      },
+      {
+        "feature": "recent_load_ratio",
+        "importance": 956.0
+      },
+      {
+        "feature": "engine_load_pct",
+        "importance": 861.0
+      },
+      {
+        "feature": "years_experience",
+        "importance": 831.0
+      },
+      {
+        "feature": "temperature_c",
+        "importance": 823.0
+      },
+      {
+        "feature": "travel_distance_km",
+        "importance": 795.0
+      },
+      {
+        "feature": "recent_idle_ratio",
+        "importance": 771.0
+      },
+      {
+        "feature": "soil_hardness_index",
+        "importance": 516.0
+      },
+      {
+        "feature": "machine_condition",
+        "importance": 514.0
+      },
+      {
+        "feature": "task_type",
+        "importance": 369.0
+      }
+    ],
+    "limitations": "Trained on synthetic data only."
+  },
+  "fuel_model": {
+    "target": "actual_fuel_used_l",
+    "algorithm": "LightGBM",
+    "features_used": [
+      "soil_hardness_index",
+      "site_slope_deg",
+      "rain_mm",
+      "visibility_m",
+      "temperature_c",
+      "travel_distance_km",
+      "engine_load_pct",
+      "soil_moisture_pct",
+      "recent_idle_ratio",
+      "recent_load_ratio",
+      "recent_incident_count",
+      "years_experience",
+      "workload",
+      "machine_condition",
+      "congestion_level",
+      "task_type",
+      "task_phase",
+      "day_night"
+    ],
+    "forbidden_inputs": [
+      "actual_task_duration_min",
+      "actual_fuel_used_l"
+    ],
+    "train_samples": 4000,
+    "test_samples": 1000,
+    "split": "80/20 random stratified by seed=42",
+    "outputs": "P10, P50, P90 (quantile regression)",
+    "mae_litres": 3.547,
+    "rmse_litres": 7.205,
+    "baseline_mae_litres": 12.024,
+    "improvement_over_baseline_pct": 70.5,
+    "p10_p90_coverage": 0.664,
+    "top_contributing_features": [
+      {
+        "feature": "years_experience",
+        "importance": 1906.0
+      },
+      {
+        "feature": "recent_idle_ratio",
+        "importance": 892.0
+      },
+      {
+        "feature": "travel_distance_km",
+        "importance": 799.0
+      },
+      {
+        "feature": "recent_load_ratio",
+        "importance": 797.0
+      },
+      {
+        "feature": "visibility_m",
+        "importance": 754.0
+      },
+      {
+        "feature": "engine_load_pct",
+        "importance": 700.0
+      },
+      {
+        "feature": "temperature_c",
+        "importance": 604.0
+      },
+      {
+        "feature": "soil_hardness_index",
+        "importance": 439.0
+      },
+      {
+        "feature": "site_slope_deg",
+        "importance": 432.0
+      },
+      {
+        "feature": "task_type",
+        "importance": 428.0
+      }
+    ],
+    "limitations": "Trained on synthetic data only."
+  }
+}
