@@ -1,0 +1,6 @@
+timestamp,machine_id,operator_id,task_id,session_id,machine_speed_kmh,attachment_movement,machine_state,worker_distance_m,closing_speed_mps,arm_speed,bucket_state,seatbelt_status,data_source,synthetic_flag,data_quality_confidence
+2026-01-01T08:00:00,EXC001,OP1003,T00301,S000001,0.0,False,safe_idle,42.5,0.0,0.0,closed,True,synthetic,True,0.85
+2026-01-01T08:01:00,EXC001,OP1003,T00301,S000001,0.0,True,digging,9.2,0.4,0.6,loading,True,synthetic,True,0.85
+2026-01-01T08:02:00,EXC001,OP1003,T00301,S000001,3.5,True,swinging,7.1,0.9,0.8,open,True,synthetic,True,0.85
+2026-01-01T08:03:00,EXC001,OP1003,T00301,S000001,0.0,False,safe_idle,65.0,0.0,0.0,loading,True,synthetic,True,0.85
+2026-01-01T09:00:00,DZR001,OP1004,T00302,S000002,0.0,False,safe_idle,80.0,0.0,0.0,closed,True,synthetic,True,0.85
