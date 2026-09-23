@@ -1,0 +1,11 @@
+machine_id,machine_model,machine_type,machine_year,engine_hours,machine_condition,fuel_capacity_l,current_fuel_level_pct,attachment_type,rated_capacity,maintenance_status,last_maintenance_timestamp,maintenance_due_hours,engine_health_score,hydraulic_health_score,data_source,synthetic_flag,data_quality_confidence
+EXC001,CAT 336,excavator,2020,5645.7,good,500.0,86.0,bucket,2.0,due,2025-10-30T06:00:00,5921.7,0.781,0.744,synthetic,True,0.9
+EXC002,CAT 336,excavator,2023,6359.7,fair,700.0,90.3,hammer,10.0,due,2025-12-15T06:00:00,6501.7,0.79,0.723,synthetic,True,0.9
+EXC003,CAT 320,excavator,2020,5375.9,poor,700.0,22.3,ripper,2.0,due,2025-07-30T06:00:00,5785.9,0.811,0.799,synthetic,True,0.9
+EXC004,CAT 320,excavator,2023,5422.0,good,300.0,24.1,blade,10.0,due,2025-07-12T06:00:00,5617.0,0.758,0.693,synthetic,True,0.9
+EXC005,CAT 320,excavator,2015,6507.2,poor,300.0,75.8,blade,1.5,due,2025-08-13T06:00:00,6789.2,0.858,0.855,synthetic,True,0.9
+EXC006,CAT D6T,dozer,2021,6088.9,poor,500.0,88.1,bucket,2.0,due,2025-12-13T06:00:00,6265.9,0.794,0.735,synthetic,True,0.9
+EXC007,CAT 140,grader,2021,7851.5,poor,500.0,69.3,hammer,3.0,overdue,2025-12-13T06:00:00,8134.5,0.783,0.713,synthetic,True,0.9
+EXC008,CAT 966,loader,2018,1876.5,good,300.0,56.7,grapple,1.5,ok,2025-07-27T06:00:00,2204.5,0.961,0.91,synthetic,True,0.9
+EXC009,CAT 966,loader,2023,2760.1,good,500.0,71.9,grapple,8.0,ok,2025-08-26T06:00:00,3044.1,0.962,0.95,synthetic,True,0.9
+EXC010,CAT 745,hauler,2023,1394.1,good,500.0,42.2,grapple,5.0,ok,2025-08-11T06:00:00,1738.1,1.0,0.966,synthetic,True,0.9

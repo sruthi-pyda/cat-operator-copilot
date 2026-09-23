@@ -1,0 +1,4 @@
+operator_id,face_registered,face_embedding_path,face_model,face_registration_timestamp,data_source,synthetic_flag
+OP1001,True,data/face_registrations/OP1001_embedding.npy,ArcFace,2026-01-01T06:00:00,synthetic,True
+OP1002,True,data/face_registrations/OP1002_embedding.npy,ArcFace,2026-01-01T06:00:00,synthetic,True
+OP1003,True,data/face_registrations/OP1003_embedding.npy,ArcFace,2026-01-01T06:00:00,synthetic,True
