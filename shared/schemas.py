@@ -166,11 +166,18 @@ class BehaviorResult:
         Fraction of the total behavioural gap explained by context (0–1).
         Used by the Training Hub gate:
             if context_share > 0.5: do NOT trigger coaching
-        Returns 0.0 if both components are zero (insufficient evidence).
+
+        Zero-gap rule: if both components are zero the operator deviated by
+        exactly nothing — there is no basis for attributing fault to them.
+        Returns 1.0 (context explains everything / insufficient evidence)
+        so the gate correctly suppresses coaching.
+        Returning 0.0 in this case would pass the "context isn't dominant"
+        check and make a zero-deviation session coachable — the opposite of
+        the intended protection (ref D008).
         """
         denom = abs(self.operator_residual) + abs(self.context_explained_component)
         if denom < 1e-9:
-            return 0.0
+            return 1.0   # no gap → no operator fault → suppress coaching
         return abs(self.context_explained_component) / denom
 
 
