@@ -247,13 +247,11 @@ git reset -q data/synthetic/
 
 ---
 
-## OPEN-01 — Demo operators' certification expiry
+## D031 — Expired demo certificates are intentional
 
-**Not yet decided; needs the team.** In `operators.csv`, `OP1002` has `certification_expiry = 2025-09-04`, already in the past, so `check_authorization` correctly refuses to open a session for that operator. `OP1001` expires 2026-10-03.
+**Resolved 2026-09-23 (was OPEN-01).** `OP1002`'s `certification_expiry` of 2025-09-04 is deliberate, not a data defect. The team wants an operator whose certificate has lapsed so the demo can show authorization **refusing** a session rather than only ever succeeding.
 
-`OP1001`–`OP1003` are the three registered demo operators. Expired certificates elsewhere in the table are valuable (they prove the check works), but a demo operator who cannot start a session is a problem for the end-to-end run.
-
-**Options:** give the three demo operators far-future expiry dates in the generator, or pick a demo operator whose certificate is valid and keep `OP1002` as the deliberate refusal case.
+**Consequence:** `OP1002` authenticates by face but cannot open a session, and the dashboard shows the refusal with reason `certification_expired`. Demo the successful path with an operator whose certificate is current. The generator should not be "fixed".
 
 ---
 

@@ -53,8 +53,13 @@ def capture_frames(
     camera_index: int = 0,
     delay_sec: float = DEFAULT_FRAME_DELAY_SEC,
     show_preview: bool = True,
+    countdown_sec: int = 0,
 ) -> list[Any]:
-    """Grab `count` frames from the webcam, with a live preview window."""
+    """Grab `count` frames from the webcam, with a live preview window.
+
+    `countdown_sec` gives the person time to get in front of the camera; the
+    warm-up reads run during it so the preview is live while they position.
+    """
     import cv2
 
     camera = cv2.VideoCapture(camera_index)
@@ -67,6 +72,14 @@ def capture_frames(
     try:
         for _ in range(WARMUP_FRAMES):
             camera.read()
+
+        for remaining in range(countdown_sec, 0, -1):
+            print(f"  starting in {remaining}...")
+            ok, frame = camera.read()
+            if ok and show_preview:
+                cv2.imshow("Registration - look at the camera", frame)
+                cv2.waitKey(1)
+            time.sleep(1)
 
         for index in range(count):
             time.sleep(delay_sec)
@@ -104,6 +117,7 @@ def run_register(
     frame_count: int,
     camera_index: int,
     show_preview: bool,
+    countdown_sec: int = 5,
     settings: Optional[dict] = None,
 ) -> int:
     settings = settings or load_settings()
@@ -111,7 +125,9 @@ def run_register(
     recognizer = DeepFaceRecognizer(model_name=settings["biometric"]["face_model"])
 
     print(f"Registering {operator_id} with {frame_count} frames. Look at the camera.")
-    frames = capture_frames(frame_count, camera_index, show_preview=show_preview)
+    frames = capture_frames(
+        frame_count, camera_index, show_preview=show_preview, countdown_sec=countdown_sec
+    )
     save_frames(frames, operator_id, store)
 
     try:
@@ -168,6 +184,9 @@ def build_parser() -> argparse.ArgumentParser:
     register = sub.add_parser("register", help="Register one operator from the webcam.")
     register.add_argument("--operator-id", required=True, help="e.g. OP1003")
     register.add_argument("--frames", type=int, default=DEFAULT_FRAME_COUNT)
+    register.add_argument(
+        "--countdown", type=int, default=5, help="Seconds before the first capture."
+    )
 
     sub.add_parser("login", help="Capture one frame and identify the operator.")
 
@@ -182,7 +201,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "register":
         return run_register(
-            args.operator_id, args.frames, args.camera, show_preview=not args.no_preview
+            args.operator_id,
+            args.frames,
+            args.camera,
+            show_preview=not args.no_preview,
+            countdown_sec=args.countdown,
         )
     return run_login(args.camera, show_preview=not args.no_preview)
 
