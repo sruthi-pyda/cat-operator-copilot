@@ -23,12 +23,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from features.buddy.buddy import ask  # noqa: E402
-from features.buddy.evidence import (  # noqa: E402
-    SOURCE_SAFETY_INCIDENT,
-    SOURCE_TASK_PLAN,
-    SOURCE_TELEMETRY,
-    Evidence,
-)
+from features.buddy.retrieval import retrieve  # noqa: E402
 from features.buddy.safe_state import MachineStateSnapshot, evaluate_safe_state  # noqa: E402
 from features.dashboard import adapters  # noqa: E402
 from features.dashboard.data import DashboardData, MissingDatasetError  # noqa: E402
@@ -188,7 +183,7 @@ def render_end_of_shift(data: DashboardData, session_id: str) -> None:
         )
 
 
-def render_buddy(context, telemetry: pd.DataFrame) -> None:
+def render_buddy(context, telemetry: pd.DataFrame, events: pd.DataFrame) -> None:
     st.subheader("Operating Buddy")
     st.caption(
         "Available only when the machine is parked or in verified safe idle with no "
@@ -216,16 +211,19 @@ def render_buddy(context, telemetry: pd.DataFrame) -> None:
     else:
         st.warning("Buddy blocked: " + ", ".join(gate.reasons))
 
-    question = st.text_input("Ask the Buddy", "Why did my task order change?")
+    st.caption(
+        "Try: *what is my next task* · *how much fuel is left* · *is it safe to swing* · "
+        "*what is the stopping procedure* · *is it dangerous near the river* (not covered — defers)"
+    )
+    question = st.text_input("Ask the Buddy", "Is it safe to swing right now?")
     if st.button("Ask"):
-        evidence = [
-            Evidence(source=SOURCE_TASK_PLAN, value=context.task_id,
-                     content=f"The current task is {context.task_id} ({context.task.task_type}).",
-                     timestamp=context.timestamp, confidence=0.8),
-            Evidence(source=SOURCE_TELEMETRY, value=row.machine_state,
-                     content=f"The machine is currently {row.machine_state}.",
-                     timestamp=context.timestamp, confidence=0.9),
-        ]
+        telemetry_row = row.to_dict()
+        evidence = retrieve(
+            question,
+            session_context=context,
+            telemetry_row=telemetry_row,
+            safety_events=events.to_dict(orient="records") if not events.empty else (),
+        )
         response = ask(question, snapshot, evidence)
         if response.answered:
             st.success(response.answer)
@@ -322,7 +320,7 @@ def main() -> None:
     st.divider()
     render_live_operation(data, session_id, context, events)
     st.divider()
-    render_buddy(context, telemetry)
+    render_buddy(context, telemetry, events)
     st.divider()
     render_training_gate(operator_id)
     st.divider()
