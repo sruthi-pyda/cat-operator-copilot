@@ -275,4 +275,24 @@ PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -m streamlit run app/ui/dashboar
 
 ---
 
+## D032 — Face detector backend is `retinaface`, not DeepFace's default
+
+**Decision:** `biometric.face_detector_backend: "retinaface"` in `config/settings.yaml`.
+
+**Evidence:** The first real registration captured six well-exposed webcam frames (mean brightness ~170) and DeepFace's default `opencv` detector found a face in **0 of 6**, so registration failed with "no detectable face". Re-run on the same saved frames: `opencv` 0/6, `ssd` 0/6, `retinaface` **6/6**, `mtcnn` **6/6**. The frames were fine; the detector was not.
+
+**Note:** this is the *detector* (finding the face in the frame), a separate choice from the *recogniser* (ArcFace, D004). `mtcnn` is an equally good fallback if retinaface ever misbehaves.
+
+---
+
+## D033 — Confidence threshold 0.70 is calibrated on the accept side only
+
+**Measured 2026-09-23** on OP1003's six registration frames: same-person cosine similarity ranged **0.7566 – 0.9878** (mean 0.8907). Every pair clears the configured 0.70, so a genuine operator authenticates — but the worst pair has only 0.057 of margin.
+
+**Still unknown:** the reject side. With one registered face there is no different-person distribution to measure, so we cannot yet say 0.70 rejects an impostor.
+
+**Action when OP1001 and OP1002 register:** measure cross-person similarity and set `face_confidence_threshold` between the two distributions rather than leaving the current starting value unexamined.
+
+---
+
 _Add new decisions here as they arise. Do not silently make assumptions._

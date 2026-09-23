@@ -48,6 +48,14 @@ class CameraError(RuntimeError):
     pass
 
 
+def _build_recognizer(settings: dict) -> DeepFaceRecognizer:
+    biometric = settings["biometric"]
+    return DeepFaceRecognizer(
+        model_name=biometric["face_model"],
+        detector_backend=biometric.get("face_detector_backend", "retinaface"),
+    )
+
+
 def capture_frames(
     count: int = DEFAULT_FRAME_COUNT,
     camera_index: int = 0,
@@ -122,7 +130,7 @@ def run_register(
 ) -> int:
     settings = settings or load_settings()
     store = EmbeddingStore.from_settings(settings)
-    recognizer = DeepFaceRecognizer(model_name=settings["biometric"]["face_model"])
+    recognizer = _build_recognizer(settings)
 
     print(f"Registering {operator_id} with {frame_count} frames. Look at the camera.")
     frames = capture_frames(
@@ -153,7 +161,7 @@ def run_login(camera_index: int, show_preview: bool, settings: Optional[dict] = 
         print("No operators are registered yet. Run the register command first.")
         return 1
 
-    recognizer = DeepFaceRecognizer(model_name=settings["biometric"]["face_model"])
+    recognizer = _build_recognizer(settings)
     print(f"Registered operators: {', '.join(registered)}")
     print("Capturing one frame for login...")
 

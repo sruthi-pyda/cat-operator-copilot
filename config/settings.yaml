@@ -15,6 +15,10 @@ biometric:
   face_confidence_threshold: 0.70   # Minimum confidence to authenticate
   face_model: "ArcFace"
   face_backend: "deepface"
+  # Detector, not recogniser. Measured on 6 real webcam frames: opencv and ssd
+  # found a face in 0/6, retinaface and mtcnn in 6/6. opencv is the DeepFace
+  # default and is not reliable enough for registration (D032).
+  face_detector_backend: "retinaface"
   registration_image_dir: "data/face_registrations"
   keep_images_local: true
 
