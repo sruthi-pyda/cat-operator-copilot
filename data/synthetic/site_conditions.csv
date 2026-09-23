@@ -1,0 +1,11 @@
+location_id,soil_material,soil_moisture_pct,soil_hardness_index,slope_deg,surface_type,route_condition,work_zone_constraint,blocked_route,worker_density,equipment_density,congestion_level,blind_zone_flag,data_source,synthetic_flag,data_quality_confidence
+LOC001,mixed,35.7,0.409,11.8,wet,partially_blocked,none,False,0,8,high,False,synthetic,True,0.85
+LOC002,rock,21.9,0.872,11.3,wet,partially_blocked,no_go_zone,False,9,4,medium,False,synthetic,True,0.85
+LOC003,gravel,64.1,0.575,8.6,soft,partially_blocked,restricted_zone,False,5,4,medium,False,synthetic,True,0.85
+LOC004,mixed,71.5,0.761,10.1,rocky,blocked,restricted_zone,True,11,2,low,False,synthetic,True,0.85
+LOC005,rock,42.1,0.735,1.4,paved,blocked,no_go_zone,True,0,7,high,True,synthetic,True,0.85
+LOC006,rock,18.0,0.794,14.9,soft,blocked,none,True,12,3,medium,False,synthetic,True,0.85
+LOC007,rock,16.5,0.88,2.4,soft,partially_blocked,restricted_zone,False,14,4,medium,False,synthetic,True,0.85
+LOC008,rock,28.3,0.906,14.1,rocky,blocked,restricted_zone,True,9,8,high,True,synthetic,True,0.85
+LOC009,gravel,44.4,0.382,3.3,soft,partially_blocked,no_go_zone,False,14,8,high,False,synthetic,True,0.85
+LOC010,sand,79.3,0.142,9.0,paved,blocked,restricted_zone,True,1,2,low,False,synthetic,True,0.85
