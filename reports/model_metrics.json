@@ -35,23 +35,23 @@
     "test_samples": 1000,
     "split": "80/20 random stratified by seed=42",
     "outputs": "P10, P50, P90 (quantile regression)",
-    "mae_minutes": 8.215,
-    "rmse_minutes": 12.975,
+    "mae_minutes": 8.356,
+    "rmse_minutes": 13.313,
     "baseline_mae_minutes": 31.675,
-    "improvement_over_baseline_pct": 74.1,
-    "p10_p90_coverage": 0.648,
+    "improvement_over_baseline_pct": 73.6,
+    "p10_p90_coverage": 0.643,
     "top_contributing_features": [
       {
         "feature": "visibility_m",
-        "importance": 1015.0
+        "importance": 1029.0
       },
       {
         "feature": "recent_load_ratio",
-        "importance": 956.0
+        "importance": 937.0
       },
       {
         "feature": "engine_load_pct",
-        "importance": 861.0
+        "importance": 910.0
       },
       {
         "feature": "years_experience",
@@ -59,27 +59,27 @@
       },
       {
         "feature": "temperature_c",
-        "importance": 823.0
+        "importance": 822.0
       },
       {
         "feature": "travel_distance_km",
-        "importance": 795.0
+        "importance": 793.0
       },
       {
         "feature": "recent_idle_ratio",
-        "importance": 771.0
+        "importance": 766.0
       },
       {
         "feature": "soil_hardness_index",
-        "importance": 516.0
+        "importance": 509.0
       },
       {
         "feature": "machine_condition",
-        "importance": 514.0
+        "importance": 494.0
       },
       {
         "feature": "task_type",
-        "importance": 369.0
+        "importance": 392.0
       }
     ],
     "limitations": "Trained on synthetic data only."
@@ -115,51 +115,51 @@
     "test_samples": 1000,
     "split": "80/20 random stratified by seed=42",
     "outputs": "P10, P50, P90 (quantile regression)",
-    "mae_litres": 3.547,
-    "rmse_litres": 7.205,
-    "baseline_mae_litres": 12.024,
-    "improvement_over_baseline_pct": 70.5,
-    "p10_p90_coverage": 0.664,
+    "mae_litres": 3.539,
+    "rmse_litres": 7.222,
+    "baseline_mae_litres": 12.039,
+    "improvement_over_baseline_pct": 70.6,
+    "p10_p90_coverage": 0.666,
     "top_contributing_features": [
       {
         "feature": "years_experience",
-        "importance": 1906.0
+        "importance": 1818.0
       },
       {
         "feature": "recent_idle_ratio",
-        "importance": 892.0
-      },
-      {
-        "feature": "travel_distance_km",
-        "importance": 799.0
+        "importance": 977.0
       },
       {
         "feature": "recent_load_ratio",
+        "importance": 811.0
+      },
+      {
+        "feature": "travel_distance_km",
         "importance": 797.0
       },
       {
         "feature": "visibility_m",
-        "importance": 754.0
+        "importance": 758.0
       },
       {
         "feature": "engine_load_pct",
-        "importance": 700.0
+        "importance": 638.0
       },
       {
         "feature": "temperature_c",
-        "importance": 604.0
-      },
-      {
-        "feature": "soil_hardness_index",
-        "importance": 439.0
+        "importance": 634.0
       },
       {
         "feature": "site_slope_deg",
-        "importance": 432.0
+        "importance": 486.0
+      },
+      {
+        "feature": "soil_hardness_index",
+        "importance": 447.0
       },
       {
         "feature": "task_type",
-        "importance": 428.0
+        "importance": 417.0
       }
     ],
     "limitations": "Trained on synthetic data only."

@@ -178,6 +178,8 @@ class BehaviorModel:
         coaching_eligible = (
             attribution == "operator-driven"
             and confidence >= MIN_CONFIDENCE_FOR_COACHING
+            and operator_residual > 0   # only when observed > expected (excess idle)
+            # negative residual = operator is performing better than expected — never coach that
         )
 
         session_id = str(context_row.get("session_id", "unknown"))

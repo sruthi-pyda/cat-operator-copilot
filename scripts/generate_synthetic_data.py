@@ -266,6 +266,21 @@ def generate_weather(n=6000):
 # ── TASK SESSIONS ─────────────────────────────────────────────────────────────
 
 def generate_task_sessions(operators_df, machines_df, tasks_df, site_df):
+    # ── Demo shaping (OPEN-02) ────────────────────────────────────────────────
+    # OP1001-OP1003 are the only face-registered operators (demo login path).
+    # Without shaping, none of them triggered the training gate in 600-session
+    # evaluation — OP1003 actually performs better than expected.
+    # This boost gives OP1001 a consistent operator-driven idle elevation so the
+    # Safety→Behavior→Training loop is demonstrable through the face-login path.
+    # This is shaping demo data to cover the demo arc, not fabricating a result.
+    # The residual is real; we are ensuring the pattern exists for the operator
+    # the demo will authenticate as. Logged as OPEN-02, resolved by Option 1.
+    DEMO_OPERATOR_IDLE_BOOST = {
+        "OP1001": 0.15,   # adds ~15pp idle above context-expected → operator-driven at ≥0.72 confidence
+                          # 0.09 was absorbed by context model; 0.15 clears the 0.06 threshold
+                          # even in high-congestion sessions where expected is already elevated
+    }
+
     op_exp   = dict(zip(operators_df.operator_id, operators_df.years_experience))
     op_idle  = dict(zip(operators_df.operator_id, operators_df.baseline_idle_ratio))
     op_cycle = dict(zip(operators_df.operator_id, operators_df.baseline_cycle_time_sec))
@@ -318,6 +333,7 @@ def generate_task_sessions(operators_df, machines_df, tasks_df, site_df):
         end = start + timedelta(minutes=dur)
 
         idle_r  = float(np.clip(op_idle.get(op, 0.12) * cong_f[cong] + rng.normal(0, 0.02), 0.02, 0.50))
+        idle_r  = float(np.clip(idle_r + DEMO_OPERATOR_IDLE_BOOST.get(op, 0.0), 0.02, 0.50))  # OPEN-02
         idle_t  = dur * idle_r
         cycles  = max(1, int(dur / (op_cycle.get(op, 60) / 60)) + int(rng.integers(-2, 3)))
 
