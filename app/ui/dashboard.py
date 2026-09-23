@@ -55,6 +55,24 @@ def load_table(synthetic_dir: str, name: str) -> pd.DataFrame:
     return DashboardData(Path(synthetic_dir))._read(name)
 
 
+def safe_section(render, *args, name: str) -> None:
+    """Render one section; a failure inside it must not blank the shift screen.
+
+    The error is shown with the section that raised it rather than swallowed --
+    a teammate's module failing should be visible and attributable, just not
+    fatal. Streamlit otherwise stops the whole script on an uncaught exception,
+    so every section below the broken one would silently disappear.
+    """
+    try:
+        render(*args)
+    except Exception as exc:  # noqa: BLE001 - deliberate boundary
+        st.error(
+            f"**{name} failed to render.** {type(exc).__name__}: {exc}\n\n"
+            "The rest of the dashboard is unaffected. This is a fault in the "
+            "feature behind this section, not in the data."
+        )
+
+
 def unavailable(result: adapters.AdapterResult) -> None:
     st.info(f"Not integrated yet — {result.feature} (owner: {result.owner})", icon=":material/link_off:")
 
@@ -627,25 +645,29 @@ def main() -> None:
     telemetry = telemetry[telemetry.session_id == session_id]
 
     render_integration_strip()
-    render_header(context, operator, machine, events)
+    safe_section(render_header, context, operator, machine, events, name="Shift status")
     st.divider()
-    render_plan(context)
+    safe_section(render_plan, context, name="Plan")
     st.divider()
-    changes = render_replan(data, sessions, session_id, context)
+    changes = ()
+    try:
+        changes = render_replan(data, sessions, session_id, context) or ()
+    except Exception as exc:  # noqa: BLE001
+        st.error(f"**Replanning failed to render.** {type(exc).__name__}: {exc}")
     st.divider()
-    render_prediction(context)
+    safe_section(render_prediction, context, name="Prediction")
     st.divider()
-    render_conditions(context)
+    safe_section(render_conditions, context, name="Conditions")
     st.divider()
-    render_live_operation(data, session_id, context, events)
+    safe_section(render_live_operation, data, session_id, context, events, name="Live operation")
     st.divider()
-    render_attention(events, changes, telemetry)
+    safe_section(render_attention, events, changes, telemetry, name="Attention queue")
     st.divider()
-    render_buddy(context, telemetry, events)
+    safe_section(render_buddy, context, telemetry, events, name="Operating Buddy")
     st.divider()
-    render_training(operator_id, context)
+    safe_section(render_training, operator_id, context, name="Training Hub")
     st.divider()
-    render_end_of_shift(data, session_id)
+    safe_section(render_end_of_shift, data, session_id, name="End of shift")
 
 
 if __name__ == "__main__":
