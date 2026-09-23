@@ -30,6 +30,7 @@ from features.dashboard.attention_candidates import (  # noqa: E402
     replan_candidate,
     safety_candidate,
 )
+from features.dashboard.comparison import compare_prediction_to_outcome  # noqa: E402
 from features.dashboard.data import DashboardData, MissingDatasetError  # noqa: E402
 from features.dashboard.replan import describe_context_change, replan_reason  # noqa: E402
 from features.dashboard.replay import TelemetryReplay  # noqa: E402
@@ -160,27 +161,30 @@ def render_attention(events: pd.DataFrame, changes, telemetry: pd.DataFrame) -> 
         st.caption("Nothing proposed for this session.")
         return
 
-    st.dataframe(
-        pd.DataFrame([
-            {
-                "event_type": c.event_type, "severity": c.severity, "urgency": c.urgency,
-                "actionability": c.actionability, "operator_state": c.operator_state,
-                "decision": c.decision,
-            }
-            for c in candidates
-        ]),
-        width="stretch", hide_index=True,
-    )
+    routed = [adapters.route_event(candidate) for candidate in candidates]
+    integrated = routed[0].available
 
-    routed = adapters.route_event(candidates[0])
-    if not routed.available:
+    rows = []
+    for candidate, outcome in zip(candidates, routed):
+        decision = candidate.decision
+        reason = ""
+        if outcome.available and isinstance(outcome.value, dict):
+            decision = outcome.value.get("decision", decision)
+            reason = outcome.value.get("reason", "")
+        rows.append({
+            "event_type": candidate.event_type, "severity": candidate.severity,
+            "urgency": candidate.urgency, "actionability": candidate.actionability,
+            "operator_state": candidate.operator_state,
+            "decision": decision, "reason": reason,
+        })
+    st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+
+    if not integrated:
         st.info(
-            f"Not integrated yet — attention (owner: {routed.owner}). Until it lands these "
+            f"Not integrated yet — attention (owner: {routed[0].owner}). Until it lands these "
             "stay `pending`; deciding between them is that feature's job, not the dashboard's.",
             icon=":material/link_off:",
         )
-    else:
-        st.write(routed.value)
 
 
 def render_prediction(context) -> None:
@@ -193,9 +197,16 @@ def render_prediction(context) -> None:
 
     prediction = result.value
     columns = st.columns(4)
-    columns[0].metric("ETA P50 (min)", f"{prediction.eta_p50:.1f}")
-    columns[1].metric("ETA range", f"{prediction.eta_p10:.0f} – {prediction.eta_p90:.0f}")
-    columns[2].metric("Fuel P50 (L)", f"{prediction.fuel_p50:.1f}")
+    columns[0].metric("ETA P50 (min)", f"{prediction.eta_p50:.1f}" if prediction.eta_p50 else "—")
+    columns[1].metric(
+        "ETA range",
+        f"{prediction.eta_p10:.0f} – {prediction.eta_p90:.0f}" if prediction.eta_p50 else "—",
+    )
+    # A zeroed fuel field means this call predicted ETA only; a 0.0 on screen
+    # would read as a prediction of no fuel use.
+    columns[2].metric(
+        "Fuel P50 (L)", f"{prediction.fuel_p50:.1f}" if prediction.fuel_p50 else "not predicted"
+    )
     columns[3].metric("Confidence", f"{prediction.confidence:.2f}")
     if prediction.factors:
         st.caption("Contributing factors: " + ", ".join(prediction.factors)
@@ -304,13 +315,23 @@ def render_end_of_shift(data: DashboardData, session_id: str) -> None:
     columns[2].metric("Actual idle (min)", f"{outcome['actual_idle_time_min']:.1f}")
     columns[3].metric("Actual cycles", int(outcome["actual_cycle_count"]))
 
-    if prediction.available:
-        st.caption("Compared against the prediction above.")
-    else:
+    if not prediction.available:
+        unavailable(prediction)
         st.caption(
             "These are recorded outcomes, shown after the fact. They are the prediction "
             "targets and are never used as model inputs."
         )
+        return
+
+    rows = compare_prediction_to_outcome(prediction.value, outcome)
+    st.dataframe(
+        pd.DataFrame([row.to_dict() for row in rows]), width="stretch", hide_index=True
+    )
+    st.caption(
+        "The actual falls inside the P10–P90 band or it does not — that is the honest "
+        "test of the uncertainty estimate, not the P50 error alone. One session proves "
+        "nothing either way; held-out metrics across many sessions are the real check."
+    )
 
 
 def render_buddy(context, telemetry: pd.DataFrame, events: pd.DataFrame) -> None:

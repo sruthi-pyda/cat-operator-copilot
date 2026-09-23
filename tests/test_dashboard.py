@@ -92,19 +92,24 @@ def test_availability_reflects_the_dataset(data, tmp_path):
 
 # --- adapters ----------------------------------------------------------------
 
-def test_absent_feature_is_reported_unavailable_with_an_owner():
-    result = get_prediction(session_context=None)
+def test_an_unavailable_feature_reports_an_owner_and_no_value(monkeypatch):
+    """Asserted against a guaranteed-absent feature, so this holds after integration."""
+    monkeypatch.setitem(sys.modules, "features.safety", types.SimpleNamespace())
+    monkeypatch.setitem(sys.modules, "features.safety.api", types.SimpleNamespace())
+    result = get_safety(session_context=None)
     assert isinstance(result, AdapterResult)
     assert result.available is False
     assert result.value is None
     assert "not_integrated_yet" in result.reason
-    assert result.owner == "Member 1"
+    assert result.owner == "Member 2"
 
 
-def test_no_placeholder_value_is_ever_substituted():
+def test_no_placeholder_value_is_ever_substituted(monkeypatch):
     """A fabricated number on screen is worse than a blank one."""
-    for result in (get_prediction(None), get_safety(None)):
-        assert result.value is None
+    for feature in ("features.safety", "features.optimization"):
+        monkeypatch.setitem(sys.modules, feature, types.SimpleNamespace())
+        monkeypatch.setitem(sys.modules, f"{feature}.api", types.SimpleNamespace())
+    assert get_safety(None).value is None
 
 
 def test_integration_status_lists_every_expected_feature():
@@ -113,6 +118,37 @@ def test_integration_status_lists_every_expected_feature():
         "prediction", "behavior", "safety", "optimization", "attention",
     }
     assert all(isinstance(r, AdapterResult) for r in status.values())
+
+
+def test_integration_status_reflects_what_is_actually_importable():
+    """Holds whether or not a teammate's module is present -- it asserts the
+    adapter tells the truth, not which features happen to exist today."""
+    expected = {
+        "prediction": "predict_task", "behavior": "analyze_behavior",
+        "safety": "evaluate_safety", "optimization": "generate_plan",
+        "attention": "route_event",
+    }
+    for feature, function_name in expected.items():
+        assert integration_status()[feature].available == (
+            resolve(feature, function_name) is not None
+        )
+
+
+def test_prediction_prefers_the_combined_call(monkeypatch):
+    """predict_task zeroes the fuel fields; predict_combined populates both."""
+    module = types.SimpleNamespace(
+        predict_task=lambda ctx: "eta_only",
+        predict_combined=lambda ctx: "both",
+    )
+    monkeypatch.setitem(sys.modules, "features.prediction", module)
+    assert get_prediction(None).value == "both"
+
+
+def test_prediction_falls_back_when_only_predict_task_exists(monkeypatch):
+    module = types.SimpleNamespace(predict_task=lambda ctx: "eta_only")
+    monkeypatch.setitem(sys.modules, "features.prediction", module)
+    monkeypatch.setitem(sys.modules, "features.prediction.api", types.SimpleNamespace())
+    assert get_prediction(None).value == "eta_only"
 
 
 def test_adapter_uses_a_feature_once_it_exists(monkeypatch):

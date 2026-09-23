@@ -106,7 +106,16 @@ def _call(feature: str, function_name: str, *args, **kwargs) -> AdapterResult:
 
 
 def get_prediction(session_context: SessionContext) -> AdapterResult:
-    return _call(FEATURE_PREDICTION, "predict_task", session_context)
+    """Prefer `predict_combined`: it populates ETA *and* fuel.
+
+    `predict_task` returns ETA with the fuel fields zeroed and `predict_fuel`
+    does the reverse, so using either alone would put a 0.0 on screen next to a
+    real number, which reads as a prediction rather than as an absence.
+    """
+    for function_name in ("predict_combined", "predict_task"):
+        if resolve(FEATURE_PREDICTION, function_name) is not None:
+            return _call(FEATURE_PREDICTION, function_name, session_context)
+    return _call(FEATURE_PREDICTION, "predict_combined", session_context)
 
 
 def get_safety(session_context: SessionContext) -> AdapterResult:
