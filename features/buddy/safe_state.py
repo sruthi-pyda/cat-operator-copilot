@@ -27,13 +27,25 @@ from typing import Any, Optional
 from shared.config import SAFETY_RULES_PATH, load_settings, load_yaml
 
 # Telemetry vocabularies: which reported values mean "this part is not moving".
-# These map raw telemetry strings to motion, not to a tunable threshold.
+# These map raw telemetry values to motion, not to a tunable threshold.
+#
+# `attachment_movement` arrives as a boolean in the generated telemetry
+# (False = not moving) and as a word in the documented schema, so both spellings
+# are accepted. Anything not listed here counts as movement.
 STATIONARY_ATTACHMENT_MOVEMENTS = frozenset(
-    {"none", "no_movement", "idle", "static", "stationary", "stowed", "parked"}
+    {
+        "none", "no_movement", "idle", "static", "stationary", "stowed", "parked",
+        "false", "0", "no", "off",
+    }
 )
-MOVING_BUCKET_STATES = frozenset(
-    {"digging", "dumping", "curling", "lifting", "loading", "swinging", "carrying"}
-)
+
+# Only values that unambiguously describe motion. `bucket_state` in the
+# generated telemetry is a configuration (closed / open / loading), not a
+# motion -- `loading` co-occurs with attachment_movement=False and arm_speed=0,
+# so treating it as motion would block a third of genuinely safe moments while
+# adding nothing: real motion is already carried by attachment_movement and
+# arm_speed.
+MOVING_BUCKET_STATES = frozenset({"digging", "dumping", "curling", "lifting", "swinging"})
 
 REASON_STATE_UNKNOWN = "machine_state_unknown"
 REASON_STATE_NOT_SAFE = "machine_state_not_safe"
@@ -69,7 +81,9 @@ class SafeStateResult:
         }
 
 
-def _normalise(value: Optional[str]) -> Optional[str]:
+def _normalise(value: Optional[Any]) -> Optional[str]:
+    """Lower-cased text form. Booleans become "true"/"false" so a boolean
+    telemetry column and a worded one are handled by the same vocabulary."""
     if value is None:
         return None
     text = str(value).strip().lower()

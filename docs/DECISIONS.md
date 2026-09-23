@@ -74,11 +74,11 @@ Decisions that are not explicitly specified in the architecture document are rec
 
 ## D009 — `authorized_machine_types` delimiter
 
-**Decision:** The multi-value `operators.authorized_machine_types` column is written with `|` as the delimiter. The reader also accepts `;` and `,` and strips a surrounding `[...]`.
+**Superseded 2026-09-23 — no action needed.** The original decision asked Member 1 to emit `|`, on the assumption that a comma would collide with CSV parsing.
 
-**Reason:** A comma collides with CSV parsing. The reader is tolerant because this column is an integration boundary between the data generator (Member 1) and the Passport (Member 3).
+Checking the generated file, `authorized_machine_types` is written as a *quoted* field (`"hauler,grader,loader"`). That is valid CSV: the quoting protects the internal commas, `csv.DictReader` returns the whole string, and the reader's comma fallback already splits it correctly.
 
-**Action for Member 1:** please emit `|` in `scripts/generate_synthetic_data.py`.
+**Current state:** the reader accepts `|`, `;` and `,` and strips a surrounding `[...]`, so it handles the generator's output as-is. The generator does not need to change.
 
 ---
 
@@ -213,6 +213,47 @@ Decisions that are not explicitly specified in the architecture document are rec
 If `context_explained_component` is left at its default of 0 while `operator_residual` is populated, `context_share` becomes 0.0 and the "difficult site" protection silently disappears — every repeated, confident anomaly would become coachable. This fails open, which is the wrong direction.
 
 **Action for Member 1:** confirm both components are emitted in the same units. Flag to Member 3 if they are not.
+
+---
+
+## D026 — `attachment_movement` is a boolean in the generated telemetry
+
+**Decision:** The Buddy's safe-state gate accepts both a boolean (`False` = not moving) and the worded form implied by the documented schema. `false`, `0`, `no` and `off` join the stationary vocabulary.
+
+**Reason — this was a live defect.** The gate originally expected only words (`"none"`, `"idle"`). Against the real telemetry, `False` fell through as "not a known stationary value" and was read as *movement*, so the Buddy would have been blocked on all 75,000 rows and demo Test 5 would have failed. Verified after the fix: enabled on 20,959 / 20,959 `safe_idle` rows and blocked on 100% of `digging`, `loading`, `swinging`, `traveling` and `grading`.
+
+---
+
+## D027 — `bucket_state` is a configuration, not a motion
+
+**Decision:** `MOVING_BUCKET_STATES` covers only unambiguous motion (`digging`, `dumping`, `curling`, `lifting`, `swinging`). `loading`, `closed` and `open` do not block.
+
+**Reason:** The generated telemetry uses `closed` / `open` / `loading` to describe the bucket itself, and `loading` co-occurs with `attachment_movement=False` and `arm_speed=0` in a third of `safe_idle` rows. Treating a configuration as motion would block genuinely safe moments while adding no safety: actual motion is already carried by `attachment_movement` and `arm_speed`.
+
+---
+
+## D028 — Synthetic data is taken from Member 1's branch without merging
+
+**Decision:** The dataset is copied into the working tree with a path-scoped checkout and left **untracked** on `feature/saanvi-passport-ui`:
+
+```
+git checkout origin/feature/sruthi-data-models -- data/synthetic/
+git reset -q data/synthetic/
+```
+
+**Reason:** The team keeps branches separate. Merging would pull Member 1's code and history into this branch, and committing the data here would duplicate a 21 MB telemetry file and set up conflicts when both branches reach `develop`. The data stays owned by the branch that generates it. Re-run the two commands above to refresh after Member 1 regenerates.
+
+**Consequence:** tests must not depend on `data/synthetic/`. They use `tests/fixtures/` instead (D012); findings from the real data are pinned as unit tests with the real vocabulary values.
+
+---
+
+## OPEN-01 — Demo operators' certification expiry
+
+**Not yet decided; needs the team.** In `operators.csv`, `OP1002` has `certification_expiry = 2025-09-04`, already in the past, so `check_authorization` correctly refuses to open a session for that operator. `OP1001` expires 2026-10-03.
+
+`OP1001`–`OP1003` are the three registered demo operators. Expired certificates elsewhere in the table are valuable (they prove the check works), but a demo operator who cannot start a session is a problem for the end-to-end run.
+
+**Options:** give the three demo operators far-future expiry dates in the generator, or pick a demo operator whose certificate is valid and keep `OP1002` as the deliberate refusal case.
 
 ---
 

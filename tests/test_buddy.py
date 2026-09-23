@@ -44,6 +44,7 @@ from features.buddy.evidence import (
 from features.buddy.safe_state import (
     REASON_ATTACHMENT_MOVING,
     REASON_ATTACHMENT_UNKNOWN,
+    REASON_BUCKET_MOVING,
     REASON_MACHINE_MOVING,
     REASON_STATE_NOT_SAFE,
     REASON_STATE_UNKNOWN,
@@ -124,6 +125,67 @@ def test_unknown_state_denies_rather_than_assuming_safe():
 def test_safe_states_come_from_the_safety_guardian_config():
     """The Buddy must not keep a private definition of 'safe'."""
     assert load_safe_states() == SAFE_STATES
+
+
+# --- real telemetry vocabulary -----------------------------------------------
+# The generated telemetry reports attachment_movement as a boolean and
+# bucket_state as a configuration (closed / open / loading). These pin that
+# shape: an earlier version read False as "moving" and the Buddy never enabled.
+
+@pytest.mark.parametrize("moving_value", [False, "False", "false", 0, "no"])
+def test_boolean_attachment_movement_false_means_stationary(moving_value):
+    result = _gate(MachineStateSnapshot(
+        machine_state="safe_idle", attachment_movement=moving_value,
+        arm_speed=0.0, bucket_state="closed", machine_speed_kmh=0.0,
+    ))
+    assert result.allowed is True
+
+
+@pytest.mark.parametrize("moving_value", [True, "True", "true", 1])
+def test_boolean_attachment_movement_true_blocks(moving_value):
+    result = _gate(MachineStateSnapshot(
+        machine_state="safe_idle", attachment_movement=moving_value,
+        arm_speed=0.0, bucket_state="closed", machine_speed_kmh=0.0,
+    ))
+    assert result.allowed is False
+    assert REASON_ATTACHMENT_MOVING in result.reasons
+
+
+@pytest.mark.parametrize("bucket_state", ["closed", "open", "loading"])
+def test_bucket_configuration_is_not_treated_as_motion(bucket_state):
+    """closed/open/loading describe the bucket, not movement of it."""
+    result = _gate(MachineStateSnapshot(
+        machine_state="safe_idle", attachment_movement=False,
+        arm_speed=0.0, bucket_state=bucket_state, machine_speed_kmh=0.0,
+    ))
+    assert result.allowed is True
+
+
+@pytest.mark.parametrize("bucket_state", ["digging", "dumping", "swinging"])
+def test_bucket_in_actual_motion_still_blocks(bucket_state):
+    result = _gate(MachineStateSnapshot(
+        machine_state="safe_idle", attachment_movement=False,
+        arm_speed=0.0, bucket_state=bucket_state, machine_speed_kmh=0.0,
+    ))
+    assert result.allowed is False
+    assert REASON_BUCKET_MOVING in result.reasons
+
+
+def test_a_real_safe_idle_telemetry_row_enables_the_buddy():
+    """Exact field shape of a safe_idle row in data/synthetic/telemetry.csv."""
+    result = _gate(MachineStateSnapshot(
+        machine_state="safe_idle", attachment_movement=False,
+        arm_speed=0.0, bucket_state="loading", machine_speed_kmh=0.0,
+    ))
+    assert result.allowed is True, result.reasons
+
+
+def test_a_real_digging_telemetry_row_blocks_the_buddy():
+    result = _gate(MachineStateSnapshot(
+        machine_state="digging", attachment_movement=True,
+        arm_speed=0.7, bucket_state="loading", machine_speed_kmh=0.0,
+    ))
+    assert result.allowed is False
 
 
 # --- conflict ----------------------------------------------------------------
