@@ -28,7 +28,14 @@ from features.buddy.safe_state import MachineStateSnapshot, evaluate_safe_state 
 from features.dashboard import adapters  # noqa: E402
 from features.dashboard.data import DashboardData, MissingDatasetError  # noqa: E402
 from features.passport.authorization import check_authorization  # noqa: E402
-from features.training.trigger import evaluate_training_gate  # noqa: E402
+from features.training.lessons import load_content  # noqa: E402
+from features.training.progress import compare_metrics, next_escalation_state, score_quiz  # noqa: E402
+from features.training.trigger import (  # noqa: E402
+    ESCALATION_ESCALATED,
+    ESCALATION_FIRST,
+    ESCALATION_REPEAT,
+    evaluate_training_gate,
+)
 from shared.config import load_settings  # noqa: E402
 from shared.schemas import BehaviorResult  # noqa: E402
 
@@ -233,8 +240,124 @@ def render_buddy(context, telemetry: pd.DataFrame, events: pd.DataFrame) -> None
             st.write(response.to_dict())
 
 
+def render_training(operator_id: str) -> None:
+    st.subheader("Training Hub")
+    content = load_content()
+    gate_tab, lesson_tab, measure_tab = st.tabs(
+        ["Gate", "Lesson, scenario and quiz", "Measured improvement"]
+    )
+    with gate_tab:
+        render_training_gate(operator_id)
+    with lesson_tab:
+        render_lesson(content)
+    with measure_tab:
+        render_measurement()
+
+
+def render_lesson(content) -> None:
+    titles = {lesson.title: lesson for lesson in content.lessons}
+    lesson = titles[st.selectbox("Lesson", list(titles))]
+
+    st.markdown(f"**{lesson.title}** · {lesson.duration_min} min · covers: "
+                f"{', '.join(lesson.issue_types)}")
+    st.write(lesson.summary)
+    if lesson.objectives:
+        st.markdown("**Objectives**")
+        for item in lesson.objectives:
+            st.markdown(f"- {item}")
+    if lesson.key_points:
+        st.markdown("**Key points**")
+        for item in lesson.key_points:
+            st.markdown(f"- {item}")
+    if lesson.practice_prompt:
+        st.info(lesson.practice_prompt)
+    if lesson.disclaimer:
+        st.caption(lesson.disclaimer)
+
+    for scenario in content.scenarios_for_lesson(lesson.lesson_id):
+        with st.expander(f"Scenario — {scenario.title}"):
+            st.write(scenario.situation)
+            if scenario.context_factors:
+                st.markdown("**Context at the time:** " + ", ".join(scenario.context_factors))
+            if scenario.what_the_model_saw:
+                st.markdown(f"**What the model saw:** {scenario.what_the_model_saw}")
+            for question in scenario.discussion_questions:
+                st.markdown(f"- {question}")
+            if scenario.takeaway:
+                st.success(scenario.takeaway)
+
+    quiz = content.quiz_for_lesson(lesson.lesson_id)
+    if quiz is None:
+        st.warning("No quiz is mapped to this lesson.")
+        return
+
+    st.markdown(f"### {quiz.title}")
+    with st.form(key=f"quiz_{quiz.quiz_id}"):
+        answers = {}
+        for index, question in enumerate(quiz.questions, start=1):
+            labels = {option.text: option.option_id for option in question.options}
+            chosen = st.radio(
+                f"{index}. {question.prompt}", list(labels),
+                key=f"{quiz.quiz_id}_{question.question_id}", index=None,
+            )
+            answers[question.question_id] = labels.get(chosen)
+        submitted = st.form_submit_button("Submit answers")
+
+    if submitted:
+        result = score_quiz(quiz, answers)
+        if result.passed:
+            st.success(f"Passed — {result.correct}/{result.total} "
+                       f"({result.score:.0%}), pass mark {result.pass_score:.0%}.")
+        else:
+            st.error(f"Not passed — {result.correct}/{result.total} "
+                     f"({result.score:.0%}), pass mark {result.pass_score:.0%}.")
+        st.caption(
+            "Passing the quiz does not close the issue. Only a follow-up measurement "
+            "that meets the improvement target does."
+        )
+        for answer in result.answers:
+            marker = "correct" if answer.correct else "incorrect"
+            with st.expander(f"{answer.question_id} — {marker}"):
+                if answer.explanation:
+                    st.write(answer.explanation)
+                if not answer.correct:
+                    st.caption(f"Expected: {answer.correct_answer_id}")
+
+
+def render_measurement() -> None:
+    st.caption(
+        "The loop closes on measurement, not on completing a lesson. Enter the metric "
+        "before coaching and after it."
+    )
+    columns = st.columns(4)
+    metric = columns[0].selectbox(
+        "Metric", ["idle_ratio", "cycle_time_sec", "fuel_l_per_cycle", "safety_event_rate"]
+    )
+    before = columns[1].number_input("Before", value=0.24, step=0.01, format="%.3f")
+    after = columns[2].number_input("After", value=0.19, step=0.01, format="%.3f")
+    state = columns[3].selectbox(
+        "Current escalation state", [ESCALATION_FIRST, ESCALATION_REPEAT, ESCALATION_ESCALATED]
+    )
+
+    result = compare_metrics(metric, before, after, lower_is_better=True)
+    if not result.comparable:
+        st.warning(
+            f"No baseline to compare against ({', '.join(result.reasons)}). "
+            "No improvement percentage is reported rather than inventing one."
+        )
+    elif result.target_met:
+        st.success(f"Improved {result.improvement_pct:.1f}% — target "
+                   f"{result.target_pct:.0f}% met.")
+    else:
+        st.info(f"Changed {result.improvement_pct:.1f}% — target "
+                f"{result.target_pct:.0f}% not met.")
+
+    st.markdown(
+        f"Escalation: `{state}` → `{next_escalation_state(state, result.comparable and result.target_met)}`"
+    )
+
+
 def render_training_gate(operator_id: str) -> None:
-    st.subheader("Training gate")
     st.caption(
         "Behavioral Fingerprint is not integrated yet, so these inputs are set by hand to "
         "demonstrate the gate. They are not model output."
@@ -322,7 +445,7 @@ def main() -> None:
     st.divider()
     render_buddy(context, telemetry, events)
     st.divider()
-    render_training_gate(operator_id)
+    render_training(operator_id)
     st.divider()
     render_end_of_shift(data, session_id)
 

@@ -55,7 +55,7 @@ def test_every_required_dashboard_section_is_present(app):
     headings = " ".join(element.value for element in app.subheader)
     for section in (
         "Shift status", "Plan", "Prediction", "Conditions",
-        "Live operation", "Operating Buddy", "Training gate",
+        "Live operation", "Operating Buddy", "Training Hub",
         "End of shift",
     ):
         assert section in headings
