@@ -42,6 +42,7 @@ Passport supplies context to other features. It does **not** produce a standalon
 - [x] `features/training/trigger.py` — gate: repeated AND confidence ≥ threshold AND not primarily context-explained (D019)
 - [x] `features/training/content/` — 4 lessons, 4 quizzes, 3 scenarios as YAML
 - [x] `features/training/progress.py` — quiz scoring, before/after metric, escalation state
+- [x] Training Hub UI — lesson, scenario and quiz you can actually take, plus measured improvement
 - [x] Tests: 50 training tests; mutation-verified that removing the context-share check breaks "hard site does not get the operator coached"
 
 ## Step 4 — Grounded Buddy
@@ -50,7 +51,9 @@ Passport supplies context to other features. It does **not** produce a standalon
 - [x] `features/buddy/evidence.py` — retrieval over approved sources only; every item tagged source / timestamp / freshness / synthetic_flag / confidence / source_agreement
 - [x] `features/buddy/conflict.py` — detect conflict → authoritative source → else defer
 - [x] `features/buddy/buddy.py` — question → safe-state gate → retrieve → authority → freshness → conflict → answer or safe deferral
-- [x] Tests 4, 5, 6 from the instruction doc (31 tests)
+- [x] Tests 4, 5, 6 from the instruction doc
+- [x] `features/buddy/content/machine_manual.yaml` — 9 approved snippets, explicitly synthetic
+- [x] `features/buddy/retrieval.py` — structured retrieval across all eight approved sources
 - [ ] Safety-critical uncertainty defers to Safety Guardian / approved manual. The Buddy never makes a safety decision and never invents an operating instruction.
 
 ## Step 5 — Task Planning Dashboard
@@ -59,6 +62,7 @@ Passport supplies context to other features. It does **not** produce a standalon
 - [x] `features/dashboard/data.py` — loads the tables and enforces the pre-task / outcome split
 - [x] `app/ui/dashboard.py` — Streamlit single shift home screen, verified in a browser
 - [x] Dashboard calls the shared APIs; it does not import teammates' internal model logic
+- [x] `features/dashboard/replan.py` + banner — names why a plan would change (D035)
 
 Run it:
 
