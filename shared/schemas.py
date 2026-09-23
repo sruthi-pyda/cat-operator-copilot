@@ -144,6 +144,13 @@ class SafetyEvent:
     confidence: float
     timestamp: str
     synthetic_flag: bool
+    # Optional context (added by Safety Guardian; defaults keep older callers valid)
+    recommendation: str = ""
+    session_id: Optional[str] = None
+    operator_id: Optional[str] = None
+    machine_id: Optional[str] = None
+    rule_id: Optional[str] = None
+    evidence: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

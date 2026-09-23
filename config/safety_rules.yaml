@@ -1,16 +1,33 @@
 # Safety Guardian — Deterministic Rules
 # All thresholds must be documented here. Do NOT hard-code thresholds in Python logic.
 # Architecture requirement: safety decisions are deterministic, never LLM-driven.
+#
+# Layout:
+#   1. Threshold sections (proximity, fatigue, slope, ...) — the single source of truth
+#      for every number used by a rule.
+#   2. `rules` — declarative rule list evaluated by features/safety/safety_guardian.py.
+#      Each condition compares a context field against a literal `value` or a
+#      `ref` (dotted path into this file, e.g. "fatigue.critical_hours").
+#
+# Condition operators: gt, gte, lt, lte, eq, ne, in, not_in, is_true, is_false
+# A condition whose field is missing/None never matches (missing data never fires a rule).
+# All conditions in a rule must match (logical AND). Express OR as separate rules.
+# Optional `group`: when several rules in one group fire, only the most severe is kept
+# (e.g. one worker should produce one proximity alert, not four).
+
+severity_order: [INFO, LOW, MEDIUM, HIGH, CRITICAL]
 
 proximity:
   critical_distance_m: 5.0        # Worker within 5m of active machine
   high_distance_m: 10.0           # Worker within 10m of active machine
+  envelope_radius_m: 12.0         # Worker inside this radius of a swinging machine is "in envelope"
   medium_distance_m: 20.0         # Worker within 20m of active machine
+  low_distance_m: 25.0            # Worker within 25m of a travelling machine
 
 closing_speed:
   critical_mps: 1.5               # Closing speed >= 1.5 m/s
   high_mps: 0.8                   # Closing speed >= 0.8 m/s
-  low_mps: 0.2                    # Closing speed >= 0.2 m/s
+  low_mps: 0.2                    # Closing speed >= 0.2 m/s ("closing motion")
 
 machine_state:
   active_states:                  # States that can create a movement envelope
@@ -30,39 +47,322 @@ swing:
 visibility:
   low_visibility_m: 50            # Visibility below this degrades safety confidence
   dust_high: "high"
-
-severity_rules:
-  # CRITICAL: requires immediate action regardless of operator state
-  critical:
-    - worker_in_swing_envelope_with_closing_motion
-    - worker_under_load
-    - seatbelt_off_while_moving
-    - machine_moving_without_authorization
-
-  # HIGH: interrupt when operator state allows
-  high:
-    - worker_within_high_distance_active_machine
-    - high_closing_speed_with_proximity
-    - low_visibility_active_swing
-
-  # MEDIUM: show at next safe glance
-  medium:
-    - worker_within_medium_distance
-    - medium_closing_speed
-
-  # LOW: queue
-  low:
-    - worker_nearby_machine_stationary
-    - elevated_congestion
-
-  # INFO: no action required
-  info:
-    - worker_outside_envelope_machine_stationary
-    - routine_proximity_logged
+  confidence_penalty: 0.85        # Multiplier applied to event confidence in degraded sensing
 
 seatbelt:
   required_when_moving: true
+  moving_speed_kmh: 0.5           # Machine counts as moving above this speed
   grace_period_sec: 5             # Allow 5 seconds before triggering alert
+
+# ── Operator fatigue ─────────────────────────────────────────────────────────
+# Measured as hours into the current shift (telemetry.shift_elapsed_min / 60).
+fatigue:
+  critical_hours: 10              # > 10 h continuous shift → CRITICAL
+  high_hours: 8                   # > 8 h → HIGH
+  fatigue_proxy_high: 0.70        # Operator-level fatigue proxy (0-1) → MEDIUM warning
+
+# ── Ground slope ─────────────────────────────────────────────────────────────
+# Conservative working-slope limits for tracked/wheeled earthmoving equipment.
+# Site data ranges 1.4°–14.9°; see docs/DECISIONS.md D007.
+slope:
+  critical_deg: 12.0              # >= 12° while machine is moving/active → CRITICAL
+  high_deg: 10.0                  # >= 10° while machine is active → MEDIUM (minor deviation)
+  info_deg: 8.0                   # >= 8° → LOW informational
+
+# ── Equipment health ─────────────────────────────────────────────────────────
+equipment:
+  critical_health_score: 0.60     # engine or hydraulic health below this → malfunction (CRITICAL)
+  warning_health_score: 0.75      # below this → MEDIUM warning
+  critical_load_pct: 100.0        # sustained 100% engine/hydraulic load → MEDIUM warning
+
+# ── Weather ──────────────────────────────────────────────────────────────────
+weather:
+  heavy_rain_mm: 5.0              # HIGH
+  light_rain_mm: 1.0              # MEDIUM
+  poor_visibility_m: 200.0        # HIGH (below low_visibility_m is covered by the swing rule too)
+  reduced_visibility_m: 1000.0    # MEDIUM
+  high_wind_kmh: 30.0             # HIGH
+  extreme_heat_index_c: 40.0      # HIGH
+  high_heat_index_c: 35.0         # MEDIUM
+
+# ── Fuel ─────────────────────────────────────────────────────────────────────
+fuel:
+  low_reserve_pct: 25.0           # < 25 % → HIGH
+  warning_reserve_pct: 35.0       # < 35 % → MEDIUM
+
+# ── Rules ────────────────────────────────────────────────────────────────────
+# Rule ids double as the SafetyEvent.trigger_reason.
+rules:
+
+  # ---------- CRITICAL: immediate action regardless of operator state ----------
+  - id: worker_in_swing_envelope_with_closing_motion_critical
+    group: worker_proximity
+    trigger_reason: worker_inside_swing_envelope_with_closing_motion
+    severity: CRITICAL
+    required_action: emergency_stop
+    recommendation: "Emergency stop. Worker inside swing envelope and closing fast. Hold all motion until the worker is clear."
+    conditions:
+      - {field: worker_in_envelope, op: is_true}
+      - {field: closing_speed_mps, op: gte, ref: closing_speed.critical_mps}
+
+  - id: worker_within_critical_distance
+    group: worker_proximity
+    severity: CRITICAL
+    required_action: emergency_stop
+    recommendation: "Stop immediately. Worker within critical distance of an active machine."
+    conditions:
+      - {field: machine_active, op: is_true}
+      - {field: worker_distance_m, op: lte, ref: proximity.critical_distance_m}
+
+  - id: seatbelt_off_while_moving
+    severity: CRITICAL
+    required_action: stop_immediately
+    recommendation: "Stop the machine and fasten seatbelt before moving again."
+    conditions:
+      - {field: seatbelt_status, op: eq, value: "off"}
+      - {field: machine_speed_kmh, op: gt, ref: seatbelt.moving_speed_kmh}
+
+  - id: operator_fatigue_critical
+    severity: CRITICAL
+    required_action: end_shift_and_rest
+    recommendation: "Operator has exceeded 10 hours on shift. Bring machine to a safe state and hand over to a relief operator."
+    conditions:
+      - {field: shift_hours, op: gt, ref: fatigue.critical_hours}
+
+  - id: unsafe_ground_slope
+    severity: CRITICAL
+    required_action: move_to_level_ground
+    recommendation: "Ground slope exceeds safe working limit. Stop travel/swing and reposition on level ground."
+    conditions:
+      - {field: site_slope_deg, op: gte, ref: slope.critical_deg}
+      - {field: machine_active, op: is_true}
+
+  - id: equipment_malfunction_engine
+    severity: CRITICAL
+    required_action: stop_and_inspect
+    recommendation: "Engine health critically low. Shut down safely and call maintenance before continuing."
+    conditions:
+      - {field: engine_health_score, op: lt, ref: equipment.critical_health_score}
+
+  - id: equipment_malfunction_hydraulic
+    severity: CRITICAL
+    required_action: stop_and_inspect
+    recommendation: "Hydraulic health critically low. Lower attachment, shut down and call maintenance."
+    conditions:
+      - {field: hydraulic_health_score, op: lt, ref: equipment.critical_health_score}
+
+  # ---------- HIGH: interrupt when operator state allows ----------
+  - id: worker_in_swing_envelope_with_closing_motion
+    group: worker_proximity
+    severity: HIGH
+    required_action: stop_or_safe_action
+    recommendation: "Worker inside swing envelope and approaching. Pause swing until the worker is clear."
+    conditions:
+      - {field: worker_in_envelope, op: is_true}
+      - {field: closing_speed_mps, op: gte, ref: closing_speed.low_mps}
+
+  - id: worker_within_high_distance_active_machine
+    group: worker_proximity
+    severity: HIGH
+    required_action: stop_or_safe_action
+    recommendation: "Worker within 10 m of active machine. Pause motion and confirm eye contact."
+    conditions:
+      - {field: machine_active, op: is_true}
+      - {field: worker_distance_m, op: lte, ref: proximity.high_distance_m}
+
+  - id: high_closing_speed_with_proximity
+    group: worker_proximity
+    severity: HIGH
+    required_action: stop_or_safe_action
+    recommendation: "Worker closing quickly nearby. Slow down and prepare to stop."
+    conditions:
+      - {field: machine_active, op: is_true}
+      - {field: closing_speed_mps, op: gte, ref: closing_speed.high_mps}
+      - {field: worker_distance_m, op: lte, ref: proximity.medium_distance_m}
+
+  - id: low_visibility_active_swing
+    severity: HIGH
+    required_action: stop_or_safe_action
+    recommendation: "Visibility too low for swinging. Pause swing and use a spotter."
+    conditions:
+      - {field: machine_state, op: eq, value: swinging}
+      - {field: visibility_m, op: lt, ref: visibility.low_visibility_m}
+
+  - id: operator_fatigue_high
+    severity: HIGH
+    required_action: take_break
+    recommendation: "Operator past 8 hours on shift. Schedule a rest break at the next safe stop."
+    conditions:
+      - {field: shift_hours, op: gt, ref: fatigue.high_hours}
+      - {field: shift_hours, op: lte, ref: fatigue.critical_hours}
+
+  - id: weather_heavy_rain
+    severity: HIGH
+    required_action: reduce_operations_weather
+    recommendation: "Heavy rain. Reduce speed, avoid slopes and soft ground, and increase stopping distance."
+    conditions:
+      - {field: rain_mm, op: gte, ref: weather.heavy_rain_mm}
+
+  - id: weather_poor_visibility
+    severity: HIGH
+    required_action: reduce_operations_weather
+    recommendation: "Poor visibility. Use lights, reduce speed and require a spotter for travel."
+    conditions:
+      - {field: visibility_m, op: lt, ref: weather.poor_visibility_m}
+
+  - id: weather_high_wind
+    severity: HIGH
+    required_action: reduce_operations_weather
+    recommendation: "High wind. Avoid lifting and high-reach operations."
+    conditions:
+      - {field: wind_speed_kmh, op: gte, ref: weather.high_wind_kmh}
+
+  - id: weather_extreme_heat
+    severity: HIGH
+    required_action: take_break
+    recommendation: "Extreme heat index. Enforce hydration break and check cab cooling."
+    conditions:
+      - {field: heat_index_c, op: gte, ref: weather.extreme_heat_index_c}
+
+  - id: weather_high_dust
+    severity: HIGH
+    required_action: reduce_operations_weather
+    recommendation: "High dust. Reduce speed and confirm worker positions before moving."
+    conditions:
+      - {field: dust_level, op: eq, ref: visibility.dust_high}
+
+  - id: low_fuel_reserve
+    severity: HIGH
+    required_action: refuel
+    recommendation: "Fuel reserve below 25 %. Plan refuel before starting the next task."
+    conditions:
+      - {field: fuel_level_pct, op: lt, ref: fuel.low_reserve_pct}
+
+  # ---------- MEDIUM: minor deviations, non-critical warnings ----------
+  - id: worker_within_medium_distance
+    group: worker_proximity
+    severity: MEDIUM
+    required_action: slow_down
+    recommendation: "Worker within 20 m of active machine. Slow down and keep watch."
+    conditions:
+      - {field: machine_active, op: is_true}
+      - {field: worker_distance_m, op: lte, ref: proximity.medium_distance_m}
+
+  - id: medium_closing_speed
+    group: worker_proximity
+    severity: MEDIUM
+    required_action: slow_down
+    recommendation: "Worker approaching. Slow down."
+    conditions:
+      - {field: machine_active, op: is_true}
+      - {field: closing_speed_mps, op: gte, ref: closing_speed.low_mps}
+      - {field: worker_distance_m, op: lte, ref: proximity.low_distance_m}
+
+  - id: slope_near_limit
+    severity: MEDIUM
+    required_action: slow_down
+    recommendation: "Slope approaching limit. Travel slowly and keep the bucket low."
+    conditions:
+      - {field: site_slope_deg, op: gte, ref: slope.high_deg}
+      - {field: site_slope_deg, op: lt, ref: slope.critical_deg}
+      - {field: machine_active, op: is_true}
+
+  - id: weather_light_rain
+    severity: MEDIUM
+    required_action: monitor
+    recommendation: "Light rain. Watch for slippery surfaces."
+    conditions:
+      - {field: rain_mm, op: gte, ref: weather.light_rain_mm}
+      - {field: rain_mm, op: lt, ref: weather.heavy_rain_mm}
+
+  - id: weather_reduced_visibility
+    severity: MEDIUM
+    required_action: monitor
+    recommendation: "Reduced visibility. Turn on work lights."
+    conditions:
+      - {field: visibility_m, op: lt, ref: weather.reduced_visibility_m}
+      - {field: visibility_m, op: gte, ref: weather.poor_visibility_m}
+
+  - id: weather_high_heat
+    severity: MEDIUM
+    required_action: monitor
+    recommendation: "High heat index. Encourage hydration."
+    conditions:
+      - {field: heat_index_c, op: gte, ref: weather.high_heat_index_c}
+      - {field: heat_index_c, op: lt, ref: weather.extreme_heat_index_c}
+
+  - id: fuel_reserve_warning
+    severity: MEDIUM
+    required_action: monitor
+    recommendation: "Fuel below 35 %. Check fuel before accepting long tasks."
+    conditions:
+      - {field: fuel_level_pct, op: lt, ref: fuel.warning_reserve_pct}
+      - {field: fuel_level_pct, op: gte, ref: fuel.low_reserve_pct}
+
+  - id: equipment_health_warning
+    severity: MEDIUM
+    required_action: schedule_maintenance
+    recommendation: "Machine health degraded. Schedule an inspection."
+    conditions:
+      - {field: min_health_score, op: lt, ref: equipment.warning_health_score}
+      - {field: min_health_score, op: gte, ref: equipment.critical_health_score}
+
+  - id: maintenance_overdue
+    severity: MEDIUM
+    required_action: schedule_maintenance
+    recommendation: "Scheduled maintenance is overdue. Book service at end of shift."
+    conditions:
+      - {field: maintenance_status, op: eq, value: overdue}
+
+  - id: equipment_max_load
+    severity: MEDIUM
+    required_action: slow_down
+    recommendation: "Machine at 100 % load. Reduce bucket fill or cycle speed."
+    conditions:
+      - {field: max_load_pct, op: gte, ref: equipment.critical_load_pct}
+
+  - id: operator_fatigue_proxy_high
+    severity: MEDIUM
+    required_action: monitor
+    recommendation: "Operator's recent workload is high. Consider lighter tasks or an early break."
+    conditions:
+      - {field: fatigue_proxy, op: gte, ref: fatigue.fatigue_proxy_high}
+
+  # ---------- LOW: informational ----------
+  - id: worker_nearby_slow_travel
+    group: worker_proximity
+    severity: LOW
+    required_action: monitor
+    recommendation: "Worker near the travel path. Keep watching."
+    conditions:
+      - {field: machine_state, op: eq, value: traveling}
+      - {field: worker_distance_m, op: lte, ref: proximity.low_distance_m}
+
+  - id: elevated_congestion
+    severity: LOW
+    required_action: monitor
+    recommendation: "Site congestion is high. Watch for other equipment."
+    conditions:
+      - {field: congestion_level, op: eq, value: high}
+      - {field: machine_active, op: is_true}
+
+  - id: slope_informational
+    severity: LOW
+    required_action: monitor
+    recommendation: "Working on moderate slope."
+    conditions:
+      - {field: site_slope_deg, op: gte, ref: slope.info_deg}
+      - {field: site_slope_deg, op: lt, ref: slope.high_deg}
+
+  # ---------- INFO: no action required ----------
+  - id: worker_outside_envelope_machine_stationary
+    group: worker_proximity
+    severity: INFO
+    required_action: none_required
+    recommendation: "Worker nearby, machine stationary. Logged only."
+    conditions:
+      - {field: machine_active, op: is_false}
+      - {field: worker_distance_m, op: lte, ref: proximity.medium_distance_m}
 
 attention_override:
   critical_always_wins: true      # CRITICAL safety events always preempt everything
