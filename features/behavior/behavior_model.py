@@ -325,5 +325,10 @@ def smoke_test(model: BehaviorModel):
 
 
 if __name__ == "__main__":
-    m = train_and_save()
-    smoke_test(m)
+    # Import via the package so BehaviorModel is pickled as
+    # "features.behavior.behavior_model.BehaviorModel", not "__main__.BehaviorModel".
+    # The __main__ path would produce a pickle that fails to load from any other
+    # entry point (Streamlit, pytest, python -c).
+    from features.behavior.behavior_model import train_and_save as _train, smoke_test as _smoke
+    m = _train()
+    _smoke(m)
