@@ -1,6 +1,23 @@
+# Install into a project-local venv (see docs/DECISIONS.md D007):
+#   python -m venv .venv
+#   .venv/Scripts/python.exe -m pip install -r requirements.txt   # Windows
+#   .venv/bin/python -m pip install -r requirements.txt           # macOS/Linux
+
+# Core
 numpy
 pandas
 scikit-learn
 lightgbm
 pyyaml
+
+# Biometric - Feature 01. Verified on Python 3.13 / TensorFlow 2.21 / NumPy 2.5.
+# tf-keras is required by DeepFace under Keras 3.
 deepface
+tf-keras
+opencv-python
+
+# Dashboard UI - Feature 05
+streamlit
+
+# Tests
+pytest

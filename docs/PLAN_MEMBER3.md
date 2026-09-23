@@ -11,9 +11,9 @@ Status key: `[ ]` todo · `[~]` in progress · `[x]` done
 
 - [x] Project-local `.venv` (Python 3.13)
 - [x] Install base deps + Streamlit
-- [~] Attempt DeepFace install; verify import and a single embedding call
-- [ ] If DeepFace fails on 3.13 → fall back per D004, record result in DECISIONS.md
-- [ ] Verify webcam capture works
+- [x] Attempt DeepFace install; verify import and a single embedding call — **works** (TF 2.21, NumPy 2.5.3, ArcFace 512-dim). See D013.
+- [x] No fallback needed; `PYTHONIOENCODING=utf-8` required on Windows (D014)
+- [ ] Verify webcam capture works — **needs the user to run it**, it opens the laptop camera
 
 **Why first:** DeepFace pulls TensorFlow, the one dependency that can consume hours. Fail fast.
 **Why a venv:** TensorFlow commonly pins `numpy<2`; a global install would break other projects on this machine.
@@ -45,11 +45,11 @@ Passport supplies context to other features. It does **not** produce a standalon
 
 ## Step 4 — Grounded Buddy
 
-- [ ] `features/buddy/safe_state.py` — parked OR verified safe idle, **and** no arm/bucket/attachment movement
-- [ ] `features/buddy/evidence.py` — retrieval over approved sources only; every item tagged source / timestamp / freshness / synthetic_flag / confidence / source_agreement
-- [ ] `features/buddy/conflict.py` — detect conflict → authoritative source → else defer
-- [ ] `features/buddy/buddy.py` — question → safe-state gate → retrieve → authority → freshness → conflict → answer or safe deferral
-- [ ] Tests 4, 5, 6 from the instruction doc
+- [x] `features/buddy/safe_state.py` — parked OR verified safe idle, **and** no arm/bucket/attachment movement
+- [x] `features/buddy/evidence.py` — retrieval over approved sources only; every item tagged source / timestamp / freshness / synthetic_flag / confidence / source_agreement
+- [x] `features/buddy/conflict.py` — detect conflict → authoritative source → else defer
+- [x] `features/buddy/buddy.py` — question → safe-state gate → retrieve → authority → freshness → conflict → answer or safe deferral
+- [x] Tests 4, 5, 6 from the instruction doc (31 tests)
 - [ ] Safety-critical uncertainty defers to Safety Guardian / approved manual. The Buddy never makes a safety decision and never invents an operating instruction.
 
 ## Step 5 — Task Planning Dashboard

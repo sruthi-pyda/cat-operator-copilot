@@ -106,4 +106,54 @@ Decisions that are not explicitly specified in the architecture document are rec
 
 ---
 
+## D013 — DeepFace verified on Python 3.13; no fallback needed
+
+**Decision:** Keep DeepFace + ArcFace (D004). The fallback path is not required.
+
+**Evidence:** Installed and executed in the project venv on Python 3.13.4 — TensorFlow 2.21.0, NumPy 2.5.3, `DeepFace.represent(..., model_name="ArcFace")` returned a 512-dimension embedding. Notably TensorFlow 2.21 does **not** force a NumPy 1.x downgrade, so the venv keeps NumPy 2.x.
+
+**Note:** `tf-keras` must be installed alongside DeepFace under Keras 3.
+
+---
+
+## D014 — UTF-8 console encoding required on Windows
+
+**Decision:** Run Python with `PYTHONIOENCODING=utf-8` when DeepFace is involved.
+
+**Reason:** DeepFace's logger prints emoji; the default Windows `cp1252` console encoding raises `UnicodeEncodeError` and kills the process. This is an environment quirk, not a code defect, so it is not worked around in application code.
+
+---
+
+## D015 — Buddy reads its safe-state list from `config/safety_rules.yaml`
+
+**Decision:** `features/buddy/safe_state.py` reads `machine_state.safe_states` from the Safety Guardian's config rather than keeping its own list.
+
+**Reason:** The architecture forbids the Buddy from making safety decisions. Letting it hold a private definition of "safe" would let the two drift apart. Safety owns the definition; the Buddy obeys it.
+
+---
+
+## D016 — Unknown machine state denies Buddy interaction
+
+**Decision:** If `machine_state` or `attachment_movement` is missing, the safe-state gate refuses.
+
+**Reason:** Absent telemetry is not evidence of safety. Deny-by-default is the only defensible direction for a gate that decides whether to distract an operator.
+
+---
+
+## D017 — Safety-critical questions may only be answered from safety sources
+
+**Decision:** When a question is classified safety-critical, the Buddy discards every source except Safety Guardian incidents and approved manual snippets. If none remain, it defers to the Safety Guardian.
+
+**Reason:** Enforces "the Buddy may explain a safety event but never makes the safety decision". Classification is keyword-based and deliberately broad — a false positive costs one deferral, a false negative would let the Buddy answer a safety question on its own authority.
+
+---
+
+## D018 — Buddy answers are quoted, not generated
+
+**Decision:** `_compose_answer()` assembles the response from the `content` already carried by the winning evidence item, plus a source citation.
+
+**Reason:** The architecture forbids the LLM inventing an operating instruction. Quoting rather than generating makes that structural instead of a prompt-level request.
+
+---
+
 _Add new decisions here as they arise. Do not silently make assumptions._
