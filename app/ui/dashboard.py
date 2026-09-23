@@ -26,6 +26,10 @@ from features.buddy.buddy import ask  # noqa: E402
 from features.buddy.retrieval import retrieve  # noqa: E402
 from features.buddy.safe_state import MachineStateSnapshot, evaluate_safe_state  # noqa: E402
 from features.dashboard import adapters  # noqa: E402
+from features.dashboard.attention_candidates import (  # noqa: E402
+    replan_candidate,
+    safety_candidate,
+)
 from features.dashboard.data import DashboardData, MissingDatasetError  # noqa: E402
 from features.dashboard.replan import describe_context_change, replan_reason  # noqa: E402
 from features.passport.authorization import check_authorization  # noqa: E402
@@ -96,7 +100,7 @@ def render_plan(context) -> None:
     st.write(result.value)
 
 
-def render_replan(data: DashboardData, sessions: pd.DataFrame, session_id: str, context) -> None:
+def render_replan(data: DashboardData, sessions: pd.DataFrame, session_id: str, context):
     st.subheader("Replanning")
     operator_sessions = sessions[sessions.operator_id == context.operator_id]
     ordered = operator_sessions.sort_values("start_timestamp").session_id.tolist()
@@ -104,7 +108,7 @@ def render_replan(data: DashboardData, sessions: pd.DataFrame, session_id: str, 
 
     if position == 0:
         st.caption("Earliest session for this operator — nothing to compare against.")
-        return
+        return ()
 
     previous = data.build_session_context(ordered[position - 1])
     changes = describe_context_change(previous, context)
@@ -134,6 +138,47 @@ def render_replan(data: DashboardData, sessions: pd.DataFrame, session_id: str, 
             "location — so a site change can appear here alongside a genuine weather change. "
             "A true within-shift comparison needs the telemetry replay."
         )
+    return changes
+
+
+def render_attention(events: pd.DataFrame, changes, telemetry: pd.DataFrame) -> None:
+    st.subheader("Attention queue")
+    st.caption(
+        "Candidate events this slice proposes. Only the Attention Manager decides what "
+        "reaches the operator — nothing here has been ranked or suppressed, and every "
+        "candidate is still marked `pending`."
+    )
+
+    machine_state = telemetry.machine_state.iloc[0] if not telemetry.empty else None
+    candidates = [safety_candidate(event) for event in events.to_dict(orient="records")]
+    if changes:
+        candidates.append(replan_candidate(changes, machine_state))
+
+    if not candidates:
+        st.caption("Nothing proposed for this session.")
+        return
+
+    st.dataframe(
+        pd.DataFrame([
+            {
+                "event_type": c.event_type, "severity": c.severity, "urgency": c.urgency,
+                "actionability": c.actionability, "operator_state": c.operator_state,
+                "decision": c.decision,
+            }
+            for c in candidates
+        ]),
+        width="stretch", hide_index=True,
+    )
+
+    routed = adapters.route_event(candidates[0])
+    if not routed.available:
+        st.info(
+            f"Not integrated yet — attention (owner: {routed.owner}). Until it lands these "
+            "stay `pending`; deciding between them is that feature's job, not the dashboard's.",
+            icon=":material/link_off:",
+        )
+    else:
+        st.write(routed.value)
 
 
 def render_prediction(context) -> None:
@@ -478,13 +523,15 @@ def main() -> None:
     st.divider()
     render_plan(context)
     st.divider()
-    render_replan(data, sessions, session_id, context)
+    changes = render_replan(data, sessions, session_id, context)
     st.divider()
     render_prediction(context)
     st.divider()
     render_conditions(context)
     st.divider()
     render_live_operation(data, session_id, context, events)
+    st.divider()
+    render_attention(events, changes, telemetry)
     st.divider()
     render_buddy(context, telemetry, events)
     st.divider()

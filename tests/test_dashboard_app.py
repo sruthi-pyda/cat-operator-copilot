@@ -56,7 +56,7 @@ def test_every_required_dashboard_section_is_present(app):
     for section in (
         "Shift status", "Plan", "Prediction", "Conditions",
         "Live operation", "Operating Buddy", "Training Hub",
-        "Replanning", "End of shift",
+        "Replanning", "Attention queue", "End of shift",
     ):
         assert section in headings
 

@@ -157,3 +157,102 @@ Decisions: `show_now | queue | bundle | suppress`
 ```
 
 Training triggers only when issue is repeated AND confidence is high AND not primarily context-explained.
+
+---
+
+## Feature 01 — Operator Passport
+
+**Identify:** `identify(frame, recognizer, store, threshold=None) → IdentificationResult`
+
+```json
+{
+  "authenticated": true,
+  "operator_id": "OP1003",
+  "confidence": 0.7418,
+  "threshold": 0.7,
+  "scores": {"OP1003": 0.7418}
+}
+```
+
+Below the threshold, `operator_id` is `null` and no session may be opened.
+
+**Open a session:** `create_session(operator_id, machine_id, repository, task_id=None) → SessionResult`
+
+```json
+{
+  "authorized": true,
+  "authorization": {
+    "authorized": true,
+    "operator_id": "OP1003",
+    "machine_id": "EXC001",
+    "reasons": [],
+    "checks": {
+      "machine_type_authorized": true,
+      "certification_status_valid": true,
+      "certification_not_expired": true
+    }
+  },
+  "session_id": "S000123"
+}
+```
+
+`session_context` is `null` whenever `authorized` is false. Refusal reason codes:
+`machine_type_not_authorized`, `certification_not_valid`, `certification_expired`.
+
+Identity and authorization are separate: a recognised operator can still be refused.
+
+---
+
+## Feature 07 — Grounded Buddy
+
+**Safe-state gate:** `evaluate_safe_state(snapshot) → SafeStateResult`
+
+```json
+{
+  "allowed": false,
+  "reasons": ["machine_state_not_safe", "attachment_movement_active", "arm_in_motion"],
+  "checks": {
+    "machine_state_safe": false,
+    "attachment_stationary": false,
+    "arm_stationary": false,
+    "bucket_stationary": true,
+    "machine_stationary": true
+  }
+}
+```
+
+Unknown machine state or attachment movement **denies**. Safe states come from
+`config/safety_rules.yaml`, which Safety owns — the Buddy keeps no private definition.
+
+**Ask:** `ask(question, machine_state, evidence) → BuddyResponse`
+
+```json
+{
+  "answered": false,
+  "status": "deferred_safety_critical",
+  "reason": "Safety-critical question with no Safety Guardian or approved manual evidence; deferring.",
+  "answer": null,
+  "deferral_target": "safety_guardian",
+  "evidence": [],
+  "conflict": null,
+  "synthetic_flag": true
+}
+```
+
+Statuses: `answered`, `blocked_unsafe_state`, `deferred_no_evidence`,
+`deferred_stale_evidence`, `deferred_conflict`, `deferred_safety_critical`.
+
+**Retrieve evidence:** `retrieve(question, session_context=..., telemetry_row=..., safety_events=..., task_plan=..., prediction=..., training_state=...) → tuple[Evidence, ...]`
+
+Returned highest-authority first. Safety-critical questions may only be answered from
+`safety_incident` or `machine_manual`.
+
+---
+
+## Attention candidates produced by this slice
+
+`training_candidate`, `buddy_candidate`, `replan_candidate` and `safety_candidate` in
+`features/dashboard/attention_candidates.py` return `AttentionEvent` with
+`decision = "pending"`. They propose only; the Attention Manager decides. Training and
+Buddy are always `deferrable` / `actionable_when_stopped` so they can be held across a
+shift rather than competing with active operation.
