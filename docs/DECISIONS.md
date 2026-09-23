@@ -289,9 +289,11 @@ PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -m streamlit run app/ui/dashboar
 
 **Measured 2026-09-23** on OP1003's six registration frames: same-person cosine similarity ranged **0.7566 – 0.9878** (mean 0.8907). Every pair clears the configured 0.70, so a genuine operator authenticates — but the worst pair has only 0.057 of margin.
 
+**Live login, same day:** a fresh capture authenticated OP1003 at **0.7418** — correct, but only 0.042 above the threshold, and *below* the 0.7566 worst pair within the registration set. A new frame under different lighting and pose scores lower than the registration frames score against each other, so the working margin is thinner than the registration spread suggests.
+
 **Still unknown:** the reject side. With one registered face there is no different-person distribution to measure, so we cannot yet say 0.70 rejects an impostor.
 
-**Action when OP1001 and OP1002 register:** measure cross-person similarity and set `face_confidence_threshold` between the two distributions rather than leaving the current starting value unexamined.
+**Action when OP1001 and OP1002 register:** measure cross-person similarity and set `face_confidence_threshold` between the two distributions. If an impostor scores anywhere near 0.70 the threshold cannot simply be lowered to widen the accept margin — registration would need more varied poses and lighting instead.
 
 ---
 

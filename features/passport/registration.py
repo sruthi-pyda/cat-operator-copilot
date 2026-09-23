@@ -153,7 +153,12 @@ def run_register(
     return 0
 
 
-def run_login(camera_index: int, show_preview: bool, settings: Optional[dict] = None) -> int:
+def run_login(
+    camera_index: int,
+    show_preview: bool,
+    countdown_sec: int = 5,
+    settings: Optional[dict] = None,
+) -> int:
     settings = settings or load_settings()
     store = EmbeddingStore.from_settings(settings)
     registered = store.registered_operator_ids()
@@ -165,7 +170,9 @@ def run_login(camera_index: int, show_preview: bool, settings: Optional[dict] = 
     print(f"Registered operators: {', '.join(registered)}")
     print("Capturing one frame for login...")
 
-    frames = capture_frames(1, camera_index, show_preview=show_preview)
+    frames = capture_frames(
+        1, camera_index, show_preview=show_preview, countdown_sec=countdown_sec
+    )
     try:
         result = identify(frames[0], recognizer, store, settings=settings)
     except NoFaceDetectedError:
@@ -196,7 +203,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--countdown", type=int, default=5, help="Seconds before the first capture."
     )
 
-    sub.add_parser("login", help="Capture one frame and identify the operator.")
+    login = sub.add_parser("login", help="Capture one frame and identify the operator.")
+    login.add_argument(
+        "--countdown", type=int, default=5, help="Seconds before the frame is captured."
+    )
 
     for name in ("register", "login"):
         sub.choices[name].add_argument("--camera", type=int, default=0)
@@ -215,7 +225,9 @@ def main(argv: Optional[list[str]] = None) -> int:
             show_preview=not args.no_preview,
             countdown_sec=args.countdown,
         )
-    return run_login(args.camera, show_preview=not args.no_preview)
+    return run_login(
+        args.camera, show_preview=not args.no_preview, countdown_sec=args.countdown
+    )
 
 
 if __name__ == "__main__":
