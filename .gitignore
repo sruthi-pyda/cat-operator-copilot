@@ -2,12 +2,12 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .env
-*.pkl
-*.joblib
 *.h5
 *.pt
 *.pth
 data/face_registrations/
 logs/
-reports/
 .DS_Store
+# Allow trained model artifacts and reports
+!models/**/*.pkl
+!models/**/*.json
