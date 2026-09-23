@@ -1,0 +1,68 @@
+# Safety Guardian — Deterministic Rules
+# All thresholds must be documented here. Do NOT hard-code thresholds in Python logic.
+# Architecture requirement: safety decisions are deterministic, never LLM-driven.
+
+proximity:
+  critical_distance_m: 5.0        # Worker within 5m of active machine
+  high_distance_m: 10.0           # Worker within 10m of active machine
+  medium_distance_m: 20.0         # Worker within 20m of active machine
+
+closing_speed:
+  critical_mps: 1.5               # Closing speed >= 1.5 m/s
+  high_mps: 0.8                   # Closing speed >= 0.8 m/s
+  low_mps: 0.2                    # Closing speed >= 0.2 m/s
+
+machine_state:
+  active_states:                  # States that can create a movement envelope
+    - swinging
+    - loading
+    - digging
+    - traveling
+    - grading
+  safe_states:                    # States where Buddy is allowed
+    - parked
+    - safe_idle
+
+swing:
+  critical_angle_deg: 45          # Worker in swing envelope within this arc
+  arm_speed_high: 0.8             # Normalized arm speed threshold
+
+visibility:
+  low_visibility_m: 50            # Visibility below this degrades safety confidence
+  dust_high: "high"
+
+severity_rules:
+  # CRITICAL: requires immediate action regardless of operator state
+  critical:
+    - worker_in_swing_envelope_with_closing_motion
+    - worker_under_load
+    - seatbelt_off_while_moving
+    - machine_moving_without_authorization
+
+  # HIGH: interrupt when operator state allows
+  high:
+    - worker_within_high_distance_active_machine
+    - high_closing_speed_with_proximity
+    - low_visibility_active_swing
+
+  # MEDIUM: show at next safe glance
+  medium:
+    - worker_within_medium_distance
+    - medium_closing_speed
+
+  # LOW: queue
+  low:
+    - worker_nearby_machine_stationary
+    - elevated_congestion
+
+  # INFO: no action required
+  info:
+    - worker_outside_envelope_machine_stationary
+    - routine_proximity_logged
+
+seatbelt:
+  required_when_moving: true
+  grace_period_sec: 5             # Allow 5 seconds before triggering alert
+
+attention_override:
+  critical_always_wins: true      # CRITICAL safety events always preempt everything

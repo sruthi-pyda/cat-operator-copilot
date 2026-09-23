@@ -1,0 +1,41 @@
+# CAT Operator Copilot — Application Settings
+
+project:
+  name: "CAT Operator Copilot"
+  version: "0.1.0-hackathon"
+  team: ["Sruthi", "Aneesha", "Saanvi"]
+
+data:
+  synthetic_seed: 42
+  synthetic_dir: "data/synthetic"
+  processed_dir: "data/processed"
+  raw_dir: "data/raw"
+
+biometric:
+  face_confidence_threshold: 0.70   # Minimum confidence to authenticate
+  face_model: "ArcFace"
+  face_backend: "deepface"
+  registration_image_dir: "data/face_registrations"
+  keep_images_local: true
+
+models:
+  eta_model_dir: "models/eta_model"
+  fuel_model_dir: "models/fuel_model"
+  behavior_model_dir: "models/behavior_model"
+  train_test_split: 0.2
+  random_seed: 42
+
+attention:
+  max_queue_size: 10
+  bundle_window_sec: 30            # Bundle non-critical events within this window
+
+buddy:
+  safe_states_required:            # Machine must be in one of these for Buddy to activate
+    - parked
+    - safe_idle
+  no_attachment_movement_required: true
+  max_evidence_age_min: 60         # Evidence older than this is flagged as stale
+
+logging:
+  level: "INFO"
+  log_dir: "logs"
