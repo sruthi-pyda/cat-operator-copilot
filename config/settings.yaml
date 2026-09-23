@@ -28,6 +28,48 @@ models:
 attention:
   max_queue_size: 10
   bundle_window_sec: 30            # Bundle non-critical events within this window
+  # Tier order from docs/ARCHITECTURE.md (first = most urgent)
+  priority_order:
+    - critical_safety
+    - high_safety
+    - task_replanning
+    - behavior_nudge
+    - training
+    - buddy
+  min_confidence: 0.50             # Non-safety events below this are suppressed
+  routes:                          # tier → subsystem that renders it
+    critical_safety: safety_guardian
+    high_safety: safety_guardian
+    task_replanning: dashboard
+    behavior_nudge: behavior
+    training: training_hub
+    buddy: buddy
+
+optimization:
+  # Synthetic task deadlines fall in Jan 2026; plans default to this start time.
+  plan_start: "2026-01-01T06:00:00"
+  candidate_pool_size: 30          # Top-N open tasks (by priority, then deadline) scored per run
+  # Weighted-sum objective (cost units ≈ machine-minutes). Lower is better.
+  weights:
+    time_per_min: 1.0              # ETA P50 minutes
+    fuel_per_l: 2.0                # Fuel P50 litres
+    deadline_miss: 120.0           # P50 finish after deadline
+    deadline_at_risk: 40.0         # P90 finish after deadline (P50 on time)
+    deadline_late_per_hour: 5.0    # Additional per hour late (P50)
+    transition_per_km: 7.5         # ~8 km/h machine travel
+    attachment_swap: 20.0          # Minutes to change attachment
+    blocked_route: 15.0            # Detour penalty for blocked/partially blocked routes
+  safety_severity_cost:            # Safety Guardian findings for the planned context
+    INFO: 0
+    LOW: 2
+    MEDIUM: 10
+    HIGH: 30                       # CRITICAL is a hard block, not a cost
+  priority_factor:                 # Score = total_cost / factor (priority 1 = highest)
+    1: 2.0
+    2: 1.6
+    3: 1.3
+    4: 1.1
+    5: 1.0
 
 buddy:
   safe_states_required:            # Machine must be in one of these for Buddy to activate
