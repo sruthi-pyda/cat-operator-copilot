@@ -1,6 +1,33 @@
-numpy>=1.24
-pandas>=2.0
+# Install into a project-local venv (see docs/DECISIONS.md D007):
+#   python -m venv .venv
+#   .venv/Scripts/python.exe -m pip install -r requirements.txt   # Windows
+#   .venv/bin/python -m pip install -r requirements.txt           # macOS/Linux
+
+# Core
+numpy>=2.0
+pandas>=2.2
+pyyaml
+
+# Pinned exactly: the trained models are pickled estimators, and unpickling one
+# built by a different version is unsafe. scikit-learn raises
+# InconsistentVersionWarning and states it "might lead to breaking code or
+# invalid results" -- the model loads and returns numbers either way, so a
+# mismatch is silent. Member 1's models were trained on scikit-learn 1.4.2 while
+# this environment had 1.9.1.
+#
+# If you change either pin, retrain the models on the new version:
+#   python -c "from features.behavior.behavior_model import train_and_save; train_and_save()"
 scikit-learn==1.9.1
 lightgbm==4.7.0
-pyyaml>=6.0
-deepface>=0.0.79
+
+# Biometric - Feature 01. Verified on Python 3.13 / TensorFlow 2.21 / NumPy 2.5.
+# tf-keras is required by DeepFace under Keras 3.
+deepface
+tf-keras
+opencv-python
+
+# Dashboard UI - Feature 05
+streamlit
+
+# Tests
+pytest

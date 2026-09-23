@@ -1,0 +1,113 @@
+# Micro-lessons for the Operator Training Hub.
+#
+# SYNTHETIC HACKATHON CONTENT. This is generic, plain-language operator-training
+# guidance written for a demo. It is not official Caterpillar material, it quotes
+# no real manual, and it does not replace the machine's operation and maintenance
+# manual, the site's own procedures, or a qualified trainer.
+#
+# Each lesson maps to one or more issue_type values emitted by the Behavioral
+# Fingerprint feature. An issue_type may appear under exactly one lesson.
+
+content_source: "synthetic_hackathon_content"
+synthetic_flag: true
+disclaimer: >-
+  Generic operator-training guidance authored for a synthetic demonstration.
+  Not official Caterpillar material. Always follow the machine's operation and
+  maintenance manual and your site's procedures.
+
+lessons:
+  - lesson_id: "L001"
+    title: "Seatbelt: the two seconds that matter"
+    issue_types:
+      - "seatbelt_compliance"
+      - "seatbelt_noncompliance"
+    duration_min: 4
+    quiz_id: "Q001"
+    summary: >-
+      A rollover or sudden stop moves the operator before it moves the cab.
+      The belt keeps you inside the protective structure, which is the only
+      place the machine is designed to keep you safe.
+    objectives:
+      - "Fasten the belt before the engine is started, every time."
+      - "Recognise the short, low-speed movements where belts are most often skipped."
+      - "Check belt webbing and buckle condition during the walkaround."
+    key_points:
+      - "The protective structure only protects an operator who stays inside it."
+      - "Most belt-off findings happen on short repositioning moves, not long digs."
+      - "A twisted, frayed or slow-retracting belt is a defect; report it, do not work around it."
+      - "Adjust the seat first, then the belt, so the belt is not fighting your posture."
+    practice_prompt: >-
+      For one shift, fasten the belt as part of the start-up sequence rather than
+      after it, and note how many times the old habit would have skipped it.
+
+  - lesson_id: "L002"
+    title: "Swing zone awareness"
+    issue_types:
+      - "swing_zone_awareness"
+      - "swing_zone_intrusion"
+    duration_min: 5
+    quiz_id: "Q002"
+    summary: >-
+      The tail swing and the working envelope are larger than they feel from the
+      seat, and a person inside them cannot be made safe by reflexes alone.
+    objectives:
+      - "Describe the machine's full swing envelope, including tail swing behind you."
+      - "Confirm the zone is clear before starting a swing, not during it."
+      - "Use an agreed signal or positive confirmation before anyone approaches."
+    key_points:
+      - "Tail swing extends behind the cab; clearance in front says nothing about the rear."
+      - "Mirrors and cameras have blind spots; a clear screen is not a cleared zone."
+      - "Stop the swing first and acknowledge, then let a person approach."
+      - "A spotter is a second pair of eyes, not a transfer of responsibility."
+      - "Slowing the swing reduces both the energy and the reaction time you need."
+    practice_prompt: >-
+      Before the first swing of each cycle, name out loud where the nearest person
+      on foot is. If you cannot answer, stop and look.
+
+  - lesson_id: "L003"
+    title: "Cutting idle without cutting output"
+    issue_types:
+      - "idle_reduction"
+      - "excess_idle"
+    duration_min: 4
+    quiz_id: "Q003"
+    summary: >-
+      Idle time burns fuel and engine hours while producing nothing. Most of it
+      is waiting that could be shortened, not work that has to happen.
+    objectives:
+      - "Tell productive idle apart from avoidable idle."
+      - "Use shutdown rather than idling during predictable waits."
+      - "Respect the warm-up and cool-down the machine actually needs."
+    key_points:
+      - "Idling still accrues engine hours and brings scheduled service forward."
+      - "Long waits for trucks or instructions are the biggest avoidable block."
+      - "Warm-up and cool-down are real requirements; shutting down mid cool-down is not a saving."
+      - "Extended idling can run the engine cooler than it likes, which is its own problem."
+      - "Fixing the queue is often worth more than changing the operator's habit."
+    practice_prompt: >-
+      Note your three longest waits in a shift and what caused each. Bring the
+      causes to the shift meeting; some of them are scheduling, not operating.
+
+  - lesson_id: "L004"
+    title: "Loading technique that pays for itself"
+    issue_types:
+      - "loading_efficiency"
+      - "cycle_time_efficiency"
+    duration_min: 6
+    quiz_id: "Q004"
+    summary: >-
+      A shorter, smoother cycle moves more material per litre of fuel and puts
+      less wear on the machine than a faster, harder one.
+    objectives:
+      - "Position the machine to keep the swing angle small."
+      - "Fill the bucket in one smooth pass instead of repeated correction."
+      - "Judge a pass by the loaded cycle, not by how quickly the bucket moves."
+    key_points:
+      - "A smaller swing angle is the cheapest cycle-time saving available."
+      - "Curling at the right moment fills the bucket; forcing through the face does not."
+      - "Consistent, well-filled passes beat occasional heaped ones that spill."
+      - "Working a well-shaped face is faster than fighting a ragged one."
+      - "Harsh hydraulic movement costs fuel and component life without gaining time."
+    practice_prompt: >-
+      Reposition once so the truck sits within a narrower swing, then compare the
+      next ten cycles against your previous ten.

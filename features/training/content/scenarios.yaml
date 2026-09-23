@@ -1,0 +1,79 @@
+# Discussion scenarios for the Operator Training Hub.
+#
+# SYNTHETIC HACKATHON CONTENT. Invented situations for a demo. No real site,
+# operator or incident is described, and this is not official Caterpillar
+# material.
+#
+# Each scenario deliberately separates what was observed from what the operating
+# context explains, because the Training Hub coaches the first and escalates the
+# second. A scenario never concludes that an operator is a bad operator.
+
+content_source: "synthetic_hackathon_content"
+synthetic_flag: true
+disclaimer: >-
+  Synthetic discussion material for a demonstration. Not a description of any
+  real event and not official Caterpillar material.
+
+scenarios:
+  - scenario_id: "SC001"
+    lesson_id: "L003"
+    title: "The idle ratio that was really a queue"
+    situation: >-
+      An operator's idle ratio sits well above their own baseline for three
+      consecutive sessions. The machine is healthy and the task type is routine.
+    context_factors:
+      - "Only two haul trucks were available instead of the planned four."
+      - "A blocked haul route added several minutes to each return trip."
+      - "Weather and soil conditions were unremarkable."
+    what_the_model_saw: >-
+      Observed idle differs from expected idle, and most of that gap is explained
+      by haul-fleet availability rather than by anything the operator did.
+    discussion_questions:
+      - "Which part of the gap could this operator actually have changed?"
+      - "What would coaching this operator achieve, and what would it cost in trust?"
+      - "Who should receive this finding instead?"
+    takeaway: >-
+      A high number is not a verdict. When the context explains the gap, the
+      finding belongs to planning, and no training trigger should fire.
+
+  - scenario_id: "SC002"
+    lesson_id: "L002"
+    title: "The swing that was clear on the screen"
+    situation: >-
+      A swing begins while a worker on foot is moving along the far side of the
+      machine, outside the camera view but inside the tail-swing envelope.
+    context_factors:
+      - "Dust reduced visibility across the working area."
+      - "Ground crew had changed position since the last cycle."
+      - "The camera view was clear at the moment the swing started."
+    what_the_model_saw: >-
+      A repeated pattern of swings starting before the rear envelope has been
+      confirmed clear, across sessions with differing site conditions.
+    discussion_questions:
+      - "What would confirm the rear envelope rather than only suggest it?"
+      - "How does dust change what the mirrors and cameras can tell you?"
+      - "What signal would you agree with the ground crew before the next cycle?"
+    takeaway: >-
+      A clear screen is one input. Confirmation before movement, not detection
+      during movement, is what keeps people out of the envelope.
+
+  - scenario_id: "SC003"
+    lesson_id: "L004"
+    title: "Fast cycles, slow shift"
+    situation: >-
+      An operator's individual cycles look quick, but tonnes moved per hour trail
+      the crew average and fuel per loaded cycle is high.
+    context_factors:
+      - "The truck spot sat at a wide angle from the dig face all shift."
+      - "The face had become ragged and was not reshaped."
+      - "Machine condition and material type matched the rest of the crew."
+    what_the_model_saw: >-
+      Observed loading efficiency differs from expected efficiency under the same
+      material and machine conditions, with little of the gap explained by context.
+    discussion_questions:
+      - "Where did the time actually go across a full cycle?"
+      - "What single repositioning would have narrowed the swing?"
+      - "Over how many cycles would you measure before concluding the change worked?"
+    takeaway: >-
+      Speed inside a cycle is not the same as throughput. Measure the loaded
+      cycle over a run, not the impression of a fast bucket.

@@ -180,7 +180,7 @@ class BehaviorResult:
         so the gate correctly suppresses coaching.
         Returning 0.0 in this case would pass the "context isn't dominant"
         check and make a zero-deviation session coachable — the opposite of
-        the intended protection (ref D008).
+        the intended protection (ref D040).
         """
         denom = abs(self.operator_residual) + abs(self.context_explained_component)
         if denom < 1e-9:

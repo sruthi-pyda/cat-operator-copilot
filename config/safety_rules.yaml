@@ -63,7 +63,7 @@ fatigue:
 
 # ── Ground slope ─────────────────────────────────────────────────────────────
 # Conservative working-slope limits for tracked/wheeled earthmoving equipment.
-# Site data ranges 1.4°–14.9°; see docs/DECISIONS.md D007.
+# Site data ranges 1.4°–14.9°; see docs/DECISIONS.md D041.
 slope:
   critical_deg: 12.0              # >= 12° while machine is moving/active → CRITICAL
   high_deg: 10.0                  # >= 10° while machine is active → MEDIUM (minor deviation)

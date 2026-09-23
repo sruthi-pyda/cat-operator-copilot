@@ -1,0 +1,4 @@
+event_id,timestamp,session_id,operator_id,machine_id,worker_distance_m,closing_speed_mps,machine_state,severity,event_type,trigger_reason,required_action,data_source,synthetic_flag,confidence
+SE00001,2026-01-01T08:01:30,S000001,OP1003,EXC001,9.2,0.4,digging,CRITICAL,proximity,worker_inside_swing_envelope_with_closing_motion,stop_or_safe_action,synthetic,True,0.94
+SE00002,2026-01-01T08:03:10,S000001,OP1003,EXC001,65.0,0.0,safe_idle,INFO,proximity,routine_proximity_logged,none,synthetic,True,0.80
+SE00003,2026-01-01T09:00:30,S000002,OP1004,DZR001,80.0,0.0,safe_idle,LOW,proximity,worker_nearby_machine_stationary,monitor,synthetic,True,0.75

@@ -52,7 +52,7 @@ def test_analyze_behavior_callable_from_imported_module():
 
 
 def test_context_share_zero_gap_suppresses_coaching():
-    """Zero residual must return context_share=1.0, not 0.0 (D008)."""
+    """Zero residual must return context_share=1.0, not 0.0 (D040)."""
     from shared.schemas import BehaviorResult
 
     zero = BehaviorResult(

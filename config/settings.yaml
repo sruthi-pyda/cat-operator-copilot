@@ -15,6 +15,10 @@ biometric:
   face_confidence_threshold: 0.70   # Minimum confidence to authenticate
   face_model: "ArcFace"
   face_backend: "deepface"
+  # Detector, not recogniser. Measured on 6 real webcam frames: opencv and ssd
+  # found a face in 0/6, retinaface and mtcnn in 6/6. opencv is the DeepFace
+  # default and is not reliable enough for registration (D032).
+  face_detector_backend: "retinaface"
   registration_image_dir: "data/face_registrations"
   keep_images_local: true
 
@@ -81,3 +85,13 @@ buddy:
 logging:
   level: "INFO"
   log_dir: "logs"
+
+training:
+  content_dir: "features/training/content"
+  history_window: 10                 # Only the most recent N behaviour results are considered
+  min_occurrences: 2                 # A one-off is never coached; the issue must repeat
+  min_confidence: 0.70               # Attribution confidence floor for an occurrence to count
+  max_context_share: 0.50            # Site/machine/weather may explain at most this share of the gap
+  quiz_pass_score: 0.80              # Fraction of questions correct required to pass
+  improvement_target_pct: 10.0       # Measured improvement that closes the coaching loop
+  escalate_after_triggers: 2         # Prior triggers for the same issue before state is 'escalated'
