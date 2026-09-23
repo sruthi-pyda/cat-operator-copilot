@@ -43,6 +43,7 @@ Passport supplies context to other features. It does **not** produce a standalon
 - [x] `features/training/content/` — 4 lessons, 4 quizzes, 3 scenarios as YAML
 - [x] `features/training/progress.py` — quiz scoring, before/after metric, escalation state
 - [x] Training Hub UI — lesson, scenario and quiz you can actually take, plus measured improvement
+- [x] `features/training/peer.py` + panel — peer learning inside Training, approved and anonymised only
 - [x] Tests: 50 training tests; mutation-verified that removing the context-share check breaks "hard site does not get the operator coached"
 
 ## Step 4 — Grounded Buddy
@@ -75,9 +76,10 @@ Port 8502, not Streamlit's default 8501 — the data_repair project's app alread
 ## Step 6 — Integration
 
 - [x] Telemetry replay (`python replay.py --session S004454`) — 16 tests
+- [x] Replay drives the dashboard's Live operation section
+- [x] Attention candidates produced for every surface this slice owns
 - [ ] Wire real teammate modules in place of adapters (blocked on Members 1 and 2)
-- [ ] Replay drives the dashboard live rather than the CLI
-- [ ] End-to-end demo run
+- [ ] End-to-end demo run (needs at least one teammate feature integrated)
 
 ### Blocked on other people
 
