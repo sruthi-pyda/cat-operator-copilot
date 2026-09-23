@@ -1,0 +1,243 @@
+# Quizzes for the Operator Training Hub micro-lessons.
+#
+# SYNTHETIC HACKATHON CONTENT. Generic operator-training questions written for a
+# demo. Not official Caterpillar material and not an assessment of competence.
+#
+# Rules enforced by features/training/lessons.py at load time:
+#   - every quiz has between 5 and 10 questions
+#   - every question's answer_id is one of that question's option ids
+#   - option ids are unique within a question
+
+content_source: "synthetic_hackathon_content"
+synthetic_flag: true
+disclaimer: >-
+  Synthetic practice questions for a demonstration. Passing this quiz is not a
+  certification and does not authorise any task.
+
+quizzes:
+  - quiz_id: "Q001"
+    lesson_id: "L001"
+    title: "Seatbelt use"
+    questions:
+      - question_id: "Q001-1"
+        prompt: "When should the seatbelt be fastened?"
+        options:
+          - {option_id: "a", text: "Before starting the engine, every time"}
+          - {option_id: "b", text: "Only when travelling on a slope"}
+          - {option_id: "c", text: "Only for trips longer than a few minutes"}
+          - {option_id: "d", text: "Whenever a supervisor is on site"}
+        answer_id: "a"
+        explanation: "The belt is part of start-up, not a response to conditions or observers."
+      - question_id: "Q001-2"
+        prompt: "Why does the belt matter during a rollover?"
+        options:
+          - {option_id: "a", text: "It stops the machine from tipping"}
+          - {option_id: "b", text: "It keeps the operator inside the protective structure"}
+          - {option_id: "c", text: "It reduces fuel use"}
+          - {option_id: "d", text: "It triggers the engine shutdown"}
+        answer_id: "b"
+        explanation: "The structure protects the space it encloses; the belt keeps you in that space."
+      - question_id: "Q001-3"
+        prompt: "During which movement are belts most often skipped?"
+        options:
+          - {option_id: "a", text: "Long digging sequences"}
+          - {option_id: "b", text: "Loading trucks"}
+          - {option_id: "c", text: "Short repositioning moves"}
+          - {option_id: "d", text: "Travelling to the fuel point"}
+        answer_id: "c"
+        explanation: "Short moves feel low risk, which is exactly why the habit lapses there."
+      - question_id: "Q001-4"
+        prompt: "You find the belt webbing frayed at the buckle. What is the correct action?"
+        options:
+          - {option_id: "a", text: "Tape the fray and continue"}
+          - {option_id: "b", text: "Report it as a defect and do not rely on the belt"}
+          - {option_id: "c", text: "Use it but avoid slopes"}
+          - {option_id: "d", text: "Ignore it if it still latches"}
+        answer_id: "b"
+        explanation: "A damaged belt is a defect to report, not something to work around."
+      - question_id: "Q001-5"
+        prompt: "What should be adjusted first?"
+        options:
+          - {option_id: "a", text: "The belt, then the seat"}
+          - {option_id: "b", text: "The seat, then the belt"}
+          - {option_id: "c", text: "Neither; both are fixed"}
+          - {option_id: "d", text: "The mirrors, then the belt"}
+        answer_id: "b"
+        explanation: "Set the seat for control reach first so the belt sits correctly against your posture."
+
+  - quiz_id: "Q002"
+    lesson_id: "L002"
+    title: "Swing zone awareness"
+    questions:
+      - question_id: "Q002-1"
+        prompt: "The area in front of the machine is clear. What does that tell you about the tail swing?"
+        options:
+          - {option_id: "a", text: "Nothing; the tail sweeps its own area behind the cab"}
+          - {option_id: "b", text: "It is clear as well"}
+          - {option_id: "c", text: "It is clear if the boom is raised"}
+          - {option_id: "d", text: "It is clear at low engine speed"}
+        answer_id: "a"
+        explanation: "Front clearance says nothing about the rear; the tail sweeps its own envelope."
+      - question_id: "Q002-2"
+        prompt: "When should you confirm the swing zone is clear?"
+        options:
+          - {option_id: "a", text: "Partway through the swing"}
+          - {option_id: "b", text: "Before starting the swing"}
+          - {option_id: "c", text: "After the first swing of the cycle"}
+          - {option_id: "d", text: "Only when a spotter is absent"}
+        answer_id: "b"
+        explanation: "Once the swing has started, you are relying on reaction time instead of clearance."
+      - question_id: "Q002-3"
+        prompt: "A worker on foot wants to approach the machine. What happens first?"
+        options:
+          - {option_id: "a", text: "They walk in while you keep swinging slowly"}
+          - {option_id: "b", text: "You stop the swing and positively acknowledge them"}
+          - {option_id: "c", text: "They wave and you nod mid-cycle"}
+          - {option_id: "d", text: "They approach from the rear where you cannot see them"}
+        answer_id: "b"
+        explanation: "Movement stops and acknowledgement is explicit before anyone enters the envelope."
+      - question_id: "Q002-4"
+        prompt: "A clear camera screen means:"
+        options:
+          - {option_id: "a", text: "The zone is confirmed clear"}
+          - {option_id: "b", text: "Only that nothing is visible in that view right now"}
+          - {option_id: "c", text: "The machine will stop automatically"}
+          - {option_id: "d", text: "A spotter is unnecessary"}
+        answer_id: "b"
+        explanation: "Cameras and mirrors have blind spots; they inform a check, they are not the check."
+      - question_id: "Q002-5"
+        prompt: "What does a spotter change?"
+        options:
+          - {option_id: "a", text: "Responsibility moves to the spotter"}
+          - {option_id: "b", text: "You gain a second pair of eyes; responsibility stays with you"}
+          - {option_id: "c", text: "The swing envelope becomes smaller"}
+          - {option_id: "d", text: "Confirmation is no longer needed"}
+        answer_id: "b"
+        explanation: "A spotter adds information; the operator still owns the movement."
+      - question_id: "Q002-6"
+        prompt: "Why reduce swing speed when people are working nearby?"
+        options:
+          - {option_id: "a", text: "It saves fuel only"}
+          - {option_id: "b", text: "It lowers the energy involved and buys reaction time"}
+          - {option_id: "c", text: "It is required by the engine control"}
+          - {option_id: "d", text: "It removes the need to look"}
+        answer_id: "b"
+        explanation: "Slower swing means less energy in a contact and more time to stop before one."
+
+  - quiz_id: "Q003"
+    lesson_id: "L003"
+    title: "Idle reduction"
+    questions:
+      - question_id: "Q003-1"
+        prompt: "What does idle time cost beyond fuel?"
+        options:
+          - {option_id: "a", text: "Nothing else"}
+          - {option_id: "b", text: "Engine hours, which bring scheduled service forward"}
+          - {option_id: "c", text: "Tyre wear"}
+          - {option_id: "d", text: "Hydraulic oil only"}
+        answer_id: "b"
+        explanation: "Hours accrue while idling, so maintenance intervals arrive sooner for no output."
+      - question_id: "Q003-2"
+        prompt: "Which of these is avoidable idle?"
+        options:
+          - {option_id: "a", text: "Manufacturer-specified warm-up"}
+          - {option_id: "b", text: "Turbo cool-down after heavy work"}
+          - {option_id: "c", text: "A long wait for the next truck with the engine running"}
+          - {option_id: "d", text: "Brief idle between passes in a cycle"}
+        answer_id: "c"
+        explanation: "Predictable long waits are the block worth attacking; the others are required or productive."
+      - question_id: "Q003-3"
+        prompt: "You are told the next truck is fifteen minutes away. The better action is:"
+        options:
+          - {option_id: "a", text: "Idle so the machine stays ready"}
+          - {option_id: "b", text: "Complete cool-down, then shut down"}
+          - {option_id: "c", text: "Shut down instantly mid cool-down"}
+          - {option_id: "d", text: "Raise engine speed to stay warm"}
+        answer_id: "b"
+        explanation: "Shut down for long waits, but let the required cool-down finish first."
+      - question_id: "Q003-4"
+        prompt: "Extended light idling can:"
+        options:
+          - {option_id: "a", text: "Run the engine cooler than its designed range"}
+          - {option_id: "b", text: "Improve fuel economy for the shift"}
+          - {option_id: "c", text: "Reduce engine hours"}
+          - {option_id: "d", text: "Charge the machine faster"}
+        answer_id: "a"
+        explanation: "Long low-load idling is not a neutral state for the engine."
+      - question_id: "Q003-5"
+        prompt: "Your idle ratio is high and the cause is truck queuing. What follows?"
+        options:
+          - {option_id: "a", text: "The operator is at fault"}
+          - {option_id: "b", text: "The scheduling cause is raised; operator habit alone will not fix it"}
+          - {option_id: "c", text: "Nothing can be done"}
+          - {option_id: "d", text: "Skip cool-down to compensate"}
+        answer_id: "b"
+        explanation: "When the context explains the gap, the fix belongs to the plan, not to coaching."
+      - question_id: "Q003-6"
+        prompt: "The most useful record to bring to a shift meeting is:"
+        options:
+          - {option_id: "a", text: "Total fuel used"}
+          - {option_id: "b", text: "Your longest waits and what caused each"}
+          - {option_id: "c", text: "Number of buckets"}
+          - {option_id: "d", text: "Cab temperature"}
+        answer_id: "b"
+        explanation: "Causes are actionable; a total is only a symptom."
+
+  - quiz_id: "Q004"
+    lesson_id: "L004"
+    title: "Loading technique"
+    questions:
+      - question_id: "Q004-1"
+        prompt: "Which change usually gives the largest cycle-time saving?"
+        options:
+          - {option_id: "a", text: "Reducing the swing angle to the truck"}
+          - {option_id: "b", text: "Raising the boom higher"}
+          - {option_id: "c", text: "Moving the controls faster"}
+          - {option_id: "d", text: "Heaping every bucket"}
+        answer_id: "a"
+        explanation: "Swing occupies most of the cycle, so a narrower angle is the cheapest saving."
+      - question_id: "Q004-2"
+        prompt: "A bucket that needs two or three corrective passes to fill suggests:"
+        options:
+          - {option_id: "a", text: "Good technique"}
+          - {option_id: "b", text: "Entry angle or curl timing is off"}
+          - {option_id: "c", text: "The truck is too far away"}
+          - {option_id: "d", text: "The engine is underpowered"}
+        answer_id: "b"
+        explanation: "One smooth pass comes from entry and curl timing, not from extra force."
+      - question_id: "Q004-3"
+        prompt: "Consistent, well-filled buckets compare to occasional heaped ones how?"
+        options:
+          - {option_id: "a", text: "Worse, because peak load is lower"}
+          - {option_id: "b", text: "Better, because spillage and recleanup are avoided"}
+          - {option_id: "c", text: "The same in every case"}
+          - {option_id: "d", text: "Better only at night"}
+        answer_id: "b"
+        explanation: "Spilled material has to be handled twice, which erases the extra in the heap."
+      - question_id: "Q004-4"
+        prompt: "Why keep the face well shaped?"
+        options:
+          - {option_id: "a", text: "It looks tidier"}
+          - {option_id: "b", text: "A ragged face costs time and inconsistent fills every cycle"}
+          - {option_id: "c", text: "It reduces fuel only on slopes"}
+          - {option_id: "d", text: "It is required for refuelling"}
+        answer_id: "b"
+        explanation: "Face condition is repaid on every subsequent pass."
+      - question_id: "Q004-5"
+        prompt: "Harsh, abrupt hydraulic movement typically:"
+        options:
+          - {option_id: "a", text: "Costs fuel and component life without saving cycle time"}
+          - {option_id: "b", text: "Is the fastest way to work"}
+          - {option_id: "c", text: "Has no measurable effect"}
+          - {option_id: "d", text: "Improves bucket fill"}
+        answer_id: "a"
+        explanation: "Smoothness and speed are not opposites; harshness mostly buys wear."
+      - question_id: "Q004-6"
+        prompt: "How should a technique change be judged?"
+        options:
+          - {option_id: "a", text: "By how fast the bucket appears to move"}
+          - {option_id: "b", text: "By loaded cycle time and fuel over a run of cycles"}
+          - {option_id: "c", text: "By a single fast cycle"}
+          - {option_id: "d", text: "By engine sound"}
+        answer_id: "b"
+        explanation: "One cycle is noise; a run of cycles is a measurement."

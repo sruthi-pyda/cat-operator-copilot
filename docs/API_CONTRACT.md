@@ -132,7 +132,16 @@ Decisions: `show_now | queue | bundle | suppress`
 
 ## Training Trigger
 
-**Function:** `check_training_trigger(behavior_history) → TrainingTrigger | None`
+**Function:** `check_training_trigger(behavior_history, operator_id, issue_type, prior_trigger_count=0) → TrainingTrigger | None`
+
+> **Signature amended 2026-09-23 (Member 3).** The original contract took only
+> `behavior_history`. `BehaviorResult` carries neither `operator_id` nor
+> `issue_type`, so those must be supplied by the caller; `prior_trigger_count`
+> drives the escalation state. `BehaviorResult` itself is unchanged.
+>
+> `evaluate_training_gate(...)` returns the same decision as a `TriggerDecision`
+> with reason codes and per-occurrence checks — use it when the dashboard needs
+> to show *why* nothing fired.
 
 ```json
 {

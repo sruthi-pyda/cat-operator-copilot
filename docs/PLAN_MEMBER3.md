@@ -37,11 +37,10 @@ Passport supplies context to other features. It does **not** produce a standalon
 
 ## Step 3 — Training Hub
 
-- [ ] `features/training/trigger.py` — `check_training_trigger(behavior_history)`
-      Gate: repeated issue AND confidence ≥ threshold AND not primarily context-explained
-- [ ] `features/training/content/` — 3–5 micro-lessons, 3 scenarios, 5–10 question quizzes (data files, not code)
-- [ ] `features/training/progress.py` — quiz scoring, before/after metric, escalation state
-- [ ] Tests: single occurrence does **not** trigger; context-driven does **not** trigger; low confidence does **not** trigger; repeated + confident + operator-driven does
+- [x] `features/training/trigger.py` — gate: repeated AND confidence ≥ threshold AND not primarily context-explained (D019)
+- [x] `features/training/content/` — 4 lessons, 4 quizzes, 3 scenarios as YAML
+- [x] `features/training/progress.py` — quiz scoring, before/after metric, escalation state
+- [x] Tests: 50 training tests; mutation-verified that removing the context-share check breaks "hard site does not get the operator coached"
 
 ## Step 4 — Grounded Buddy
 
