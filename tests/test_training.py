@@ -42,6 +42,7 @@ from features.training.trigger import (
     REASON_NOT_REPEATED,
     REASON_NO_HISTORY,
     REASON_NO_LESSON_FOR_ISSUE,
+    REASON_RESIDUAL_FAVOURABLE,
     TrainingThresholds,
     check_training_trigger,
     context_share,
@@ -270,6 +271,56 @@ def test_zero_gap_agrees_with_the_shared_helper_contract():
         repeated(4, operator_residual=0.0, context_explained_component=0.0),
         operator_id=OPERATOR,
         issue_type=ISSUE,
+    ) is None
+
+
+def test_an_operator_who_beats_expectation_is_never_coached():
+    """Found in integration: the real model returns a negative residual when the
+    operator outperforms, and `context_share` uses magnitudes, so outperforming
+    looked identical to falling short. The gate assigned an idle-reduction lesson
+    to an operator who idled *less* than expected.
+    """
+    decision = evaluate_training_gate(
+        repeated(4, operator_residual=-0.09, context_explained_component=0.01),
+        operator_id=OPERATOR,
+        issue_type=ISSUE,
+    )
+    assert decision.triggered is False
+    assert REASON_RESIDUAL_FAVOURABLE in decision.reasons
+
+
+def test_an_operator_who_falls_short_is_still_coached():
+    """The direction check must not disable the gate entirely."""
+    assert check_training_trigger(
+        repeated(4, operator_residual=0.09, context_explained_component=0.01),
+        operator_id=OPERATOR,
+        issue_type=ISSUE,
+    ) is not None
+
+
+def test_a_zero_residual_is_not_coachable():
+    decision = evaluate_training_gate(
+        repeated(4, operator_residual=0.0, context_explained_component=0.01),
+        operator_id=OPERATOR,
+        issue_type=ISSUE,
+    )
+    assert decision.triggered is False
+    assert REASON_RESIDUAL_FAVOURABLE in decision.reasons
+
+
+def test_direction_can_be_inverted_for_a_higher_is_better_metric():
+    """For a metric where higher is better, a negative residual is the shortfall."""
+    assert check_training_trigger(
+        repeated(4, operator_residual=-0.09, context_explained_component=0.01),
+        operator_id=OPERATOR,
+        issue_type=ISSUE,
+        higher_is_worse=False,
+    ) is not None
+    assert check_training_trigger(
+        repeated(4, operator_residual=0.09, context_explained_component=0.01),
+        operator_id=OPERATOR,
+        issue_type=ISSUE,
+        higher_is_worse=False,
     ) is None
 
 

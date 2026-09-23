@@ -351,4 +351,22 @@ Member 1's branch adds a decision also numbered **D007** (BehaviorResult unit co
 
 ---
 
+## D038 — A favourable operator residual never triggers coaching
+
+**Decision:** `evaluate_training_gate()` rejects an occurrence whose `operator_residual` is in the favourable direction. `higher_is_worse=True` by default, matching every baseline metric in `operators.csv` (idle ratio, cycle time, fuel per cycle, safety event rate).
+
+**Found in integration, not in testing.** `context_share()` compares magnitudes, so an operator who *beat* expectation was indistinguishable from one who fell short. With Member 1's real model returning `operator_residual = -0.0241` for an operator who idled *less* than predicted, the gate assigned them the idle-reduction lesson. Coaching someone for outperforming is the clearest possible violation of "no raw behavioural blame", and every existing test used positive residuals, so nothing caught it.
+
+---
+
+## D039 — scikit-learn and lightgbm are pinned exactly
+
+**Decision:** `scikit-learn==1.9.1` and `lightgbm==4.7.0` in requirements.txt. Other libraries keep floors.
+
+**Reason:** The trained models are pickled estimators. Member 1 trained on scikit-learn 1.4.2; this environment had 1.9.1. scikit-learn raises `InconsistentVersionWarning` and states the mismatch "might lead to breaking code or invalid results" — but the model still loads and still returns numbers, so the failure is silent. Two people could demo the same model and get different predictions with no error.
+
+**Action:** after installing the pinned versions, retrain so the artifacts match the environment that loads them.
+
+---
+
 _Add new decisions here as they arise. Do not silently make assumptions._

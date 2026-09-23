@@ -57,12 +57,14 @@ REASON_NOT_REPEATED = "issue_not_repeated_enough"
 REASON_LOW_CONFIDENCE = "attribution_confidence_below_threshold"
 REASON_CONTEXT_DRIVEN_ATTRIBUTION = "attribution_not_operator_linked"
 REASON_CONTEXT_EXPLAINED = "gap_primarily_explained_by_context"
+REASON_RESIDUAL_FAVOURABLE = "operator_residual_is_favourable"
 REASON_NO_LESSON_FOR_ISSUE = "no_lesson_mapped_for_issue_type"
 
 # Emitted in this order so the dashboard always renders reasons consistently.
 _REASON_ORDER = (
     REASON_NO_HISTORY,
     REASON_INSUFFICIENT_EVIDENCE,
+    REASON_RESIDUAL_FAVOURABLE,
     REASON_CONTEXT_DRIVEN_ATTRIBUTION,
     REASON_CONTEXT_EXPLAINED,
     REASON_LOW_CONFIDENCE,
@@ -225,10 +227,15 @@ def generate_trigger_event_id() -> str:
     return f"TR{uuid.uuid4().int % 100_000:05d}"
 
 
-def _check_occurrence(result: BehaviorResult, thresholds: TrainingThresholds) -> OccurrenceCheck:
+def _check_occurrence(
+    result: BehaviorResult,
+    thresholds: TrainingThresholds,
+    higher_is_worse: bool = True,
+) -> OccurrenceCheck:
     reasons: list[str] = []
     share = context_share(result)
     attribution = result.attribution
+    residual = result.operator_residual or 0.0
 
     if attribution == INSUFFICIENT_EVIDENCE:
         reasons.append(REASON_INSUFFICIENT_EVIDENCE)
@@ -238,6 +245,13 @@ def _check_occurrence(result: BehaviorResult, thresholds: TrainingThresholds) ->
         reasons.append(REASON_LOW_CONFIDENCE)
     if share > thresholds.max_context_share:
         reasons.append(REASON_CONTEXT_EXPLAINED)
+    # Direction matters. `context_share` uses magnitudes, so an operator who beat
+    # expectation looks identical to one who fell short. Coaching someone for
+    # outperforming is the clearest possible violation of "no raw behavioural
+    # blame", so a favourable residual never counts towards a trigger.
+    favourable = residual <= 0.0 if higher_is_worse else residual >= 0.0
+    if favourable:
+        reasons.append(REASON_RESIDUAL_FAVOURABLE)
 
     return OccurrenceCheck(
         session_id=result.session_id,
@@ -264,17 +278,25 @@ def evaluate_training_gate(
     settings: Optional[dict[str, Any]] = None,
     content: Optional[TrainingContent] = None,
     trigger_event_id: Optional[str] = None,
+    higher_is_worse: bool = True,
 ) -> TriggerDecision:
-    """Run the three-part gate and report the outcome with its reasons.
+    """Run the gate and report the outcome with its reasons.
 
     `behavior_history` is the sequence of BehaviorResult for one operator and one
     issue_type, oldest first; only the most recent `history_window` are weighed.
+
+    `higher_is_worse` says which direction of `operator_residual` is unfavourable.
+    The default suits every baseline metric in operators.csv -- idle ratio, cycle
+    time, fuel per cycle, safety event rate -- where a higher value is worse. Pass
+    False for a metric where a higher value is better.
     """
     thresholds = TrainingThresholds.from_settings(settings)
     history = list(behavior_history or [])
     window = history[-thresholds.history_window:] if thresholds.history_window > 0 else history
 
-    occurrences = tuple(_check_occurrence(result, thresholds) for result in window)
+    occurrences = tuple(
+        _check_occurrence(result, thresholds, higher_is_worse) for result in window
+    )
     qualifying = tuple(o for o in occurrences if o.qualifies)
     usable = tuple(o for o in occurrences if o.attribution != INSUFFICIENT_EVIDENCE)
 
@@ -362,6 +384,7 @@ def check_training_trigger(
     settings: Optional[dict[str, Any]] = None,
     content: Optional[TrainingContent] = None,
     trigger_event_id: Optional[str] = None,
+    higher_is_worse: bool = True,
 ) -> Optional[TrainingTrigger]:
     """The API-contract entry point: a TrainingTrigger, or None when the gate holds.
 
@@ -375,4 +398,5 @@ def check_training_trigger(
         settings=settings,
         content=content,
         trigger_event_id=trigger_event_id,
+        higher_is_worse=higher_is_worse,
     ).trigger
