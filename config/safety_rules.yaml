@@ -366,3 +366,25 @@ rules:
 
 attention_override:
   critical_always_wins: true      # CRITICAL safety events always preempt everything
+
+# ── Optional LLM reasoning layer (explanation only) ──────────────────────────
+# context_aware_safety_reasoning() may ask the local LLM to explain a rule
+# decision in context. It can NEVER change severity or required_action.
+# CRITICAL is never sent to the LLM: no added latency on an emergency.
+llm_reasoning:
+  enabled_severities: [HIGH, MEDIUM]
+  max_chars: 400                  # Longer LLM output is truncated
+  # LLM text containing any of these contradicts the rule and is discarded
+  rejected_phrases:
+    - "safe to continue"
+    - "continue operating"
+    - "no need to stop"
+    - "not necessary"
+    - "can be ignored"
+    - "ignore this"
+    - "ignore the"
+    - "false alarm"
+    - "no action"
+    - "override"
+    - "downgrade"
+    - "lower the severity"

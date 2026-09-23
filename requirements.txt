@@ -26,6 +26,9 @@ deepface
 tf-keras
 opencv-python
 
+# Local LLM - optional; client falls back to deterministic text without it
+ollama
+
 # Dashboard UI - Feature 05
 streamlit
 

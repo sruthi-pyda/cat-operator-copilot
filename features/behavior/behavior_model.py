@@ -10,12 +10,22 @@ Attribution categories:
   operator-driven | context-driven | mixed | insufficient_evidence
 
 Rule: coaching is NEVER triggered for low-confidence or context-explained behavior.
+
+Operator-specific patterns (optional, learn_operator_specific_patterns):
+  A small per-operator LightGBM model learns how that operator's residual
+  varies with context. It adjusts only the operator's personal baseline and
+  the residual spread used for confidence. Stage 1 (expected_value) and the
+  residual fields stay context-only, so a habitual pattern is never absorbed
+  into "expected" and hidden from coaching.
 """
 
 import os
 import sys
 import json
 import pickle
+from datetime import datetime
+from typing import Any, Dict, Optional
+
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import Ridge
@@ -56,6 +66,34 @@ RESIDUAL_CONTEXT_THRESHOLD  = 0.03   # residual below this → context-driven
 RESIDUAL_OPERATOR_THRESHOLD = 0.06   # residual above this → likely operator-driven
 MIN_CONFIDENCE_FOR_COACHING = 0.72   # coaching requires this confidence minimum
 OPERATOR_FRACTION_THRESHOLD = 0.50   # operator fraction above this → operator-driven
+
+# Operator-specific patterns
+OPERATOR_MODEL_DIR             = f"{DATA_DIR}/operator_models"   # {operator_id}.pkl
+MIN_SESSIONS_FOR_OPERATOR_MODEL = 20   # fewer usable sessions → no model, population scoring
+SHRINKAGE_PRIOR_SESSIONS        = 10   # operator stats are blended toward population with this weight
+OPERATOR_LGBM_PARAMS = dict(           # deliberately small: ~150 sessions per operator
+    n_estimators=60, learning_rate=0.05, num_leaves=4, max_depth=3,
+    min_child_samples=10, subsample=0.8, subsample_freq=1, colsample_bytree=0.8,
+    reg_lambda=1.0, random_state=42, verbose=-1,
+)
+
+_operator_pattern_cache: Dict[str, Optional[dict]] = {}   # module-level: never pickled into the model
+
+
+def _operator_pattern_path(operator_id: str) -> str:
+    return os.path.join(OPERATOR_MODEL_DIR, f"{operator_id}.pkl")
+
+
+def load_operator_pattern(operator_id: str) -> Optional[dict]:
+    """Saved pattern for an operator, or None if none has been learned (cached)."""
+    if operator_id not in _operator_pattern_cache:
+        path = _operator_pattern_path(operator_id)
+        pattern = None
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                pattern = pickle.load(f)
+        _operator_pattern_cache[operator_id] = pattern
+    return _operator_pattern_cache[operator_id]
 
 
 class BehaviorModel:
@@ -105,6 +143,74 @@ class BehaviorModel:
               f"residual_std={self.residual_std:.4f}, n={len(df)}")
         return self
 
+    # ── Operator-specific patterns ────────────────────────────────────────────
+
+    def learn_operator_specific_patterns(self, operator_id: str,
+                                         recent_sessions: pd.DataFrame) -> Optional[dict]:
+        """
+        Fit a small LightGBM model of this operator's residual (observed idle
+        ratio − context-only expected) as a function of context, and save it to
+        data/synthetic/operator_models/{operator_id}.pkl.
+
+        Returns the saved pattern dict, or None (nothing saved; analysis stays
+        population-based) when the model is unfitted or there are fewer than
+        MIN_SESSIONS_FOR_OPERATOR_MODEL usable sessions for the operator.
+        """
+        from lightgbm import LGBMRegressor
+
+        if not self.fitted:
+            return None
+        df = recent_sessions
+        if "operator_id" in df.columns:
+            df = df[df["operator_id"] == operator_id]
+        df = df.dropna(subset=["actual_idle_time_min", "actual_task_duration_min"])
+        df = df[df["actual_task_duration_min"] > 0]
+        n = len(df)
+        if n < MIN_SESSIONS_FOR_OPERATOR_MODEL:
+            return None
+
+        observed = (df["actual_idle_time_min"] / df["actual_task_duration_min"]).clip(0, 1).values
+        X = self._encode(df)[CONTEXT_FEATURES].astype(float)
+        expected = self.idle_model.predict(self.scaler.transform(X.fillna(X.median())))
+        residual = observed - expected
+
+        model = LGBMRegressor(**OPERATOR_LGBM_PARAMS)
+        model.fit(X, residual)
+
+        # Operator residual spread, shrunk toward the population so a short
+        # history can't produce an extreme (over-)confident std.
+        op_var = float(np.var(residual, ddof=1))
+        k = SHRINKAGE_PRIOR_SESSIONS
+        shrunk_std = float(np.sqrt((n * op_var + k * self.residual_std ** 2) / (n + k))) + 1e-6
+
+        pattern = {
+            "operator_id": operator_id,
+            "model": model,
+            "features": list(CONTEXT_FEATURES),
+            "n_sessions": n,
+            "residual_mean": float(residual.mean()),
+            "residual_std": float(np.sqrt(op_var)),
+            "shrunk_residual_std": shrunk_std,
+            "population_residual_std": float(self.residual_std),
+            "weight": n / (n + k),
+            "trained_at": datetime.now().isoformat(timespec="seconds"),
+        }
+        os.makedirs(OPERATOR_MODEL_DIR, exist_ok=True)
+        with open(_operator_pattern_path(operator_id), "wb") as f:
+            pickle.dump(pattern, f)
+        _operator_pattern_cache[operator_id] = pattern
+        return pattern
+
+    def _apply_operator_pattern(self, operator_id: Optional[str], X: pd.DataFrame,
+                                expected_idle: float, baseline: float):
+        """(personal baseline, residual std) — population values when no pattern exists."""
+        pattern = load_operator_pattern(operator_id) if operator_id else None
+        if pattern is None:
+            return baseline, self.residual_std
+        personal = float(pattern["model"].predict(X[pattern["features"]].astype(float))[0])
+        personal_baseline = float(np.clip(expected_idle + pattern["weight"] * personal, 0.02, 0.70))
+        return personal_baseline, pattern["shrunk_residual_std"]
+
     # ── Inference ─────────────────────────────────────────────────────────────
 
     def analyze(
@@ -115,6 +221,7 @@ class BehaviorModel:
         actual_task_duration_min: float = 60.0,
         actual_fuel_used_l: float | None = None,
         actual_cycle_count: int | None = None,
+        operator_id: Optional[str] = None,
     ) -> BehaviorResult:
         """
         Core analysis function.
@@ -125,6 +232,10 @@ class BehaviorModel:
         context_row             : dict of context fields (workload, congestion, etc.)
         operator_baseline_idle  : operator's personal baseline idle ratio (from passport)
         actual_task_duration_min: duration for cost estimation
+        operator_id             : if a learned operator pattern exists, it replaces
+                                  operator_baseline_idle with a context-aware personal
+                                  baseline and scores confidence with the operator's
+                                  own residual spread
         """
         if not self.fitted:
             return self._insufficient(context_row.get("session_id","unknown"))
@@ -147,7 +258,12 @@ class BehaviorModel:
         operator_residual      = observed_idle_ratio - expected_idle
         context_explained      = expected_idle - self.pop_mean_idle   # context's contribution (ratio)
         operator_residual_abs  = abs(operator_residual)
-        z_score                = operator_residual / self.residual_std
+
+        # Operator pattern (if learned): personal baseline + operator-specific spread.
+        # Residual and context_explained above are deliberately unaffected.
+        operator_baseline_idle, residual_std = self._apply_operator_pattern(
+            operator_id, row_df[CONTEXT_FEATURES], expected_idle, operator_baseline_idle)
+        z_score                = operator_residual / residual_std
 
         # Guard: warn if context_explained is exactly 0 but operator_residual is significant.
         # This would indicate expected == pop_mean, not a code bug, but worth flagging.
@@ -205,6 +321,7 @@ class BehaviorModel:
             operator_baseline_idle=operator_baseline_idle,
             actual_task_duration_min=float(session_row["actual_task_duration_min"]),
             actual_fuel_used_l=float(session_row["actual_fuel_used_l"]),
+            operator_id=session_row.get("operator_id"),
         )
 
     # ── Save / Load ───────────────────────────────────────────────────────────

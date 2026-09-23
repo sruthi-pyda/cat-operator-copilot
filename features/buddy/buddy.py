@@ -14,12 +14,22 @@ carries; if no trusted source says it, the Buddy defers instead of filling the
 gap. Questions that are safety-critical may only be answered from a Safety
 Guardian incident or an approved manual snippet -- every other source defers to
 the Safety Guardian.
+
+Optional LLM synthesis (settings buddy.llm_synthesis, local Ollama only): when
+several fresh, agreeing evidence items answer a non-safety question, the LLM
+may phrase them as one conversational answer. It is given only the evidence,
+every number it uses must appear in that evidence, and citations are attached
+by code. Anything else -- safety-critical questions, conflicts, an unavailable
+LLM or an ungrounded reply -- falls back to quoting.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Optional, Sequence
+
+from features.llm.ollama_client import OllamaClient
 
 from features.buddy.conflict import (
     RESOLUTION_BY_AUTHORITY,
@@ -36,6 +46,7 @@ from features.buddy.evidence import (
     partition_by_freshness,
 )
 from features.buddy.safe_state import MachineStateSnapshot, SafeStateResult, evaluate_safe_state
+from shared.config import load_settings
 
 STATUS_ANSWERED = "answered"
 STATUS_BLOCKED_UNSAFE_STATE = "blocked_unsafe_state"
@@ -57,6 +68,26 @@ SAFETY_KEYWORDS = (
 
 AUTHORITATIVE_SAFETY_SOURCES = frozenset({SOURCE_SAFETY_INCIDENT, SOURCE_MACHINE_MANUAL})
 
+ANSWER_MODE_QUOTED = "quoted"
+ANSWER_MODE_LLM = "llm_synthesized"
+
+_SYNTHESIS_SYSTEM = (
+    "You are an equipment operator's assistant. Answer the question using ONLY the numbered "
+    "evidence provided. Do not add facts, numbers, instructions or advice that are not in the "
+    "evidence. If the evidence does not answer the question, reply exactly: "
+    "\"The available records don't answer that.\" Reply in at most three short sentences."
+)
+_NUMBER = re.compile(r"\d+(?:\.\d+)?")
+
+_llm_client: Optional[OllamaClient] = None
+
+
+def _get_llm_client() -> OllamaClient:
+    global _llm_client
+    if _llm_client is None:
+        _llm_client = OllamaClient()
+    return _llm_client
+
 
 @dataclass(frozen=True)
 class BuddyResponse:
@@ -69,6 +100,7 @@ class BuddyResponse:
     conflict: Optional[ConflictResult] = None
     deferral_target: Optional[str] = None
     synthetic_flag: bool = True
+    answer_mode: Optional[str] = None   # "quoted" | "llm_synthesized" when answered
 
     def to_dict(self, as_of: Optional[datetime] = None, max_age_min: float = 60.0) -> dict[str, Any]:
         as_of = as_of or datetime.now()
@@ -77,6 +109,7 @@ class BuddyResponse:
             "status": self.status,
             "reason": self.reason,
             "answer": self.answer,
+            "answer_mode": self.answer_mode,
             "safe_state": self.safe_state.to_dict() if self.safe_state else None,
             "evidence": [item.to_dict(as_of, max_age_min) for item in self.evidence],
             "conflict": self.conflict.to_dict() if self.conflict else None,
@@ -106,6 +139,66 @@ def _compose_answer(winner: Evidence, conflict: ConflictResult) -> str:
     return answer
 
 
+def _quote_all(evidence_list: Sequence[Evidence]) -> str:
+    parts = []
+    for item in evidence_list:
+        part = f"{item.content or item.value} (source: {item.source}"
+        if item.timestamp:
+            part += f", recorded {item.timestamp}"
+        parts.append(part + ")")
+    return " ".join(parts)
+
+
+def _citation(evidence_list: Sequence[Evidence]) -> str:
+    return "[sources: " + ", ".join(dict.fromkeys(e.source for e in evidence_list)) + "]"
+
+
+def _numbers(text: str) -> set[float]:
+    return {float(n) for n in _NUMBER.findall(text or "")}
+
+
+def synthesize_answer_with_llm(
+    evidence_list: Sequence[Evidence],
+    question: str,
+    client: Optional[OllamaClient] = None,
+) -> tuple[str, str]:
+    """
+    Phrase several evidence items as one conversational answer with the local LLM.
+
+    Returns (answer, answer_mode). The answer always ends with a code-built
+    "[sources: ...]" citation. Falls back to quoting every item verbatim when
+    the LLM is unavailable, returns nothing, or uses a number that does not
+    appear in the evidence or the question (ungrounded).
+    """
+    quoted = f"{_quote_all(evidence_list)} {_citation(evidence_list)}"
+    if not evidence_list:
+        return quoted, ANSWER_MODE_QUOTED
+
+    lines = []
+    for i, item in enumerate(evidence_list, 1):
+        stamp = f", recorded {item.timestamp}" if item.timestamp else ""
+        lines.append(f"[{i}] (source: {item.source}{stamp}) {item.content or item.value}")
+    prompt = f"Question: {question}\nEvidence:\n" + "\n".join(lines)
+
+    result = (client or _get_llm_client()).generate(prompt, system=_SYNTHESIS_SYSTEM,
+                                                     fallback=lambda _: "")
+    text = " ".join((result.text or "").split())
+    if result.source != "ollama" or not text:
+        return quoted, ANSWER_MODE_QUOTED
+
+    grounded = _numbers(question) | _numbers(" ".join(
+        f"{e.content} {e.value} {e.timestamp or ''}" for e in evidence_list))
+    if not _numbers(text) <= grounded:
+        return quoted, ANSWER_MODE_QUOTED
+
+    return f"{text} {_citation(evidence_list)}", ANSWER_MODE_LLM
+
+
+def _llm_synthesis_enabled(settings: Optional[dict]) -> bool:
+    settings = settings if settings is not None else load_settings()
+    return bool(settings.get("buddy", {}).get("llm_synthesis", False))
+
+
 def ask(
     question: str,
     machine_state: MachineStateSnapshot,
@@ -113,6 +206,7 @@ def ask(
     as_of: Optional[datetime] = None,
     settings: Optional[dict] = None,
     safe_states: Optional[frozenset[str]] = None,
+    llm_client: Optional[OllamaClient] = None,
 ) -> BuddyResponse:
     as_of = as_of or datetime.now()
     max_age = max_evidence_age_min(settings)
@@ -173,15 +267,26 @@ def ask(
         )
 
     winner = conflict.winner
+    reason = ("Answered from the highest-authority fresh evidence."
+              if conflict.resolution == RESOLUTION_BY_AUTHORITY else "Sources agree.")
+    answer, mode = _compose_answer(winner, conflict), ANSWER_MODE_QUOTED
+
+    # Synthesis only for several agreeing items on a non-safety question.
+    # Safety-critical answers stay verbatim; conflicts keep the single authoritative source.
+    if (len(usable) > 1 and not conflict.conflicted and not safety_critical
+            and _llm_synthesis_enabled(settings)):
+        answer, mode = synthesize_answer_with_llm(usable, question, client=llm_client)
+        if mode == ANSWER_MODE_LLM:
+            reason = "Sources agree; phrased by the local assistant from the cited evidence only."
+
     return BuddyResponse(
         answered=True,
         status=STATUS_ANSWERED,
-        reason="Answered from the highest-authority fresh evidence."
-        if conflict.resolution == RESOLUTION_BY_AUTHORITY
-        else "Sources agree.",
-        answer=_compose_answer(winner, conflict),
+        reason=reason,
+        answer=answer,
         safe_state=gate,
         evidence=usable,
         conflict=conflict,
         synthetic_flag=synthetic,
+        answer_mode=mode,
     )

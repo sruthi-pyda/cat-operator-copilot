@@ -2,10 +2,15 @@
 Feature 02 — Safety Guardian
 Owner: Aneesha (Team Member 2)
 
-Deterministic, rule-based safety evaluation. NO LLM is used anywhere in this
-module: every decision is a threshold comparison defined in
-config/safety_rules.yaml, so the same input always yields the same output and
-every alert can be traced to a named rule.
+Deterministic, rule-based safety evaluation. Every decision (severity,
+required_action) is a threshold comparison defined in config/safety_rules.yaml,
+so the same input always yields the same output and every alert can be traced
+to a named rule. No LLM participates in any decision.
+
+The only LLM use is context_aware_safety_reasoning(): an optional, advisory
+explanation for HIGH/MEDIUM events. It cannot change the decision, is never
+called for CRITICAL, and falls back to the rule's own text when the local LLM
+is unavailable or its answer contradicts the rule.
 
 Public functions:
   evaluate_safety(session_context)  → SafetyEvent          (most severe; API contract)
@@ -15,6 +20,7 @@ Public functions:
   scan_telemetry(...)               → List[SafetyEvent]    (batch over telemetry.csv)
   load_logged_events(...)           → List[SafetyEvent]    (safety_events.csv as SafetyEvents)
   validate_against_logged(...)      → dict                 (rule engine vs. logged labels)
+  context_aware_safety_reasoning(rule_decision, context_dict) → dict (decision + advisory reasoning)
 """
 
 import os
@@ -31,6 +37,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 sys.path.insert(0, ROOT)
 from shared.schemas import SafetyEvent, SessionContext
 from shared.constants import DATA_QUALITY_CONFIDENCE_DEFAULT, SEVERITY_LEVELS
+from features.llm.ollama_client import OllamaClient
 
 RULES_PATH = os.path.join(ROOT, "config", "safety_rules.yaml")
 DATA_DIR   = os.path.join(ROOT, "data", "synthetic")
@@ -338,6 +345,88 @@ def evaluate_safety(session_context: SessionContext) -> SafetyEvent:
         session_id=rec["session_id"], operator_id=rec["operator_id"], machine_id=rec["machine_id"],
         rule_id=None,
     )
+
+
+# ── Advisory LLM reasoning (never decides) ────────────────────────────────────
+
+_REASONING_SYSTEM = (
+    "You are a safety assistant for a heavy-equipment operator. A deterministic safety rule "
+    "has already decided the severity and required action. Do NOT change, question, soften or "
+    "second-guess that decision. In at most two short sentences, explain why the action matters "
+    "given the site context provided. Use only the facts given; do not invent any."
+)
+
+_llm_client: Optional[OllamaClient] = None
+
+
+def _get_llm_client() -> OllamaClient:
+    global _llm_client
+    if _llm_client is None:
+        _llm_client = OllamaClient()
+    return _llm_client
+
+
+def _rule_reasoning(ev: SafetyEvent) -> str:
+    facts = ", ".join(f"{k}={v}" for k, v in (ev.evidence or {}).items())
+    base = ev.recommendation or ev.trigger_reason
+    return f"{base} (rule {ev.rule_id or ev.trigger_reason}{'; ' + facts if facts else ''})"
+
+
+def context_aware_safety_reasoning(rule_decision: SafetyEvent,
+                                   context_dict: Optional[Dict[str, Any]] = None,
+                                   client: Optional[OllamaClient] = None) -> Dict[str, Any]:
+    """
+    Add a contextual, human-readable reasoning string to a rule decision.
+
+    The decision itself (severity, required_action, trigger_reason) is always
+    copied from `rule_decision` unchanged; `decision_changed` is always False.
+      * CRITICAL, LOW, INFO → rule-based reasoning only; the LLM is not called.
+      * HIGH, MEDIUM        → local LLM explains the decision in context.
+    Falls back to rule-based reasoning when the LLM is unavailable, errors,
+    returns nothing, or returns text that contradicts the rule.
+    """
+    cfg = load_rules()["llm_reasoning"]
+    rule_text = _rule_reasoning(rule_decision)
+    result = {
+        "event_id": rule_decision.event_id,
+        "severity": rule_decision.severity,
+        "required_action": rule_decision.required_action,
+        "trigger_reason": rule_decision.trigger_reason,
+        "rule_id": rule_decision.rule_id,
+        "decision_changed": False,
+        "reasoning": rule_text,
+        "reasoning_source": "rules",
+        "llm_note": None,
+        "event": rule_decision,
+    }
+
+    if rule_decision.severity not in cfg["enabled_severities"]:
+        result["llm_note"] = f"LLM not used for {rule_decision.severity} events"
+        return result
+
+    context = {**(rule_decision.evidence or {}), **(context_dict or {})}
+    prompt = (
+        f"Rule decision: severity={rule_decision.severity}, "
+        f"required_action={rule_decision.required_action}, reason={rule_decision.trigger_reason}.\n"
+        f"Rule recommendation: {rule_decision.recommendation}\n"
+        "Site context:\n" + "\n".join(f"- {k}: {v}" for k, v in context.items() if v is not None)
+    )
+    gen = (client or _get_llm_client()).generate(prompt, system=_REASONING_SYSTEM,
+                                                 fallback=lambda _: rule_text)
+    if gen.source != "ollama":
+        result["llm_note"] = f"LLM unavailable: {gen.error}"
+        return result
+
+    text = " ".join(gen.text.split())[: cfg["max_chars"]]
+    contradiction = next((p for p in cfg["rejected_phrases"] if p in text.lower()), None)
+    if not text or contradiction:
+        result["llm_note"] = (f"LLM text discarded: contradicts rule ('{contradiction}')"
+                              if contradiction else "LLM returned empty text")
+        return result
+
+    result.update(reasoning=f"{rule_decision.recommendation} {text}".strip(),
+                  reasoning_source="llm", llm_note=f"advisory text from {gen.model}")
+    return result
 
 
 # ── Batch: telemetry.csv ──────────────────────────────────────────────────────

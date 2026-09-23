@@ -456,4 +456,12 @@ if result.context_share() > 0.5:
 
 ---
 
+## D046 — Skill bonus goes to experts on specialised tasks only
+
+**Decision:** `WeightedScorer.skill_bonus_score()` multiplies `time_cost` by 0.8 (20 % bonus) when an expert takes a task requiring `advanced` skill. Other operator/task pairs are neutral (x1.0). Setting `optimization.skill_bonus.specialized_only: false` also gives the bonus to any operator meeting a non-specialised task's required level.
+
+**Reason:** Every assignable operator already meets the required machine skill level (hard constraint), and in `operators.csv` task skill always equals machine skill. A bonus for "meets the requirement" therefore applies to nearly every ordinary candidate: it can't change who is picked, it makes ordinary work look 20 % cheaper than specialised work, and experts (who also match everything) get used up on ordinary work first. Measured on 60 open tasks: with that rule, 0 advanced tasks were assigned (2 with no bonus); with the specialist-only rule, 4 were assigned, 3 of them to experts.
+
+---
+
 _Add new decisions here as they arise. Do not silently make assumptions._

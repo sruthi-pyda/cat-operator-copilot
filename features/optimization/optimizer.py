@@ -10,6 +10,9 @@ Objective per (operator, machine, task) candidate — weighted sum, lower is bet
     deadline_risk         P50/P90 finish vs. deadline (maximises deadlines met)
     transition_cost       travel + attachment swap + blocked-route detour
     safety_condition_risk Safety Guardian findings for the planned context
+Skill bonus: time_cost × optimization.skill_bonus.time_cost_multiplier (0.8) for an
+expert on a specialised task (and, if specialized_only is false, for any operator
+meeting the required level). Everything else is neutral (×1.0).
 Ranking score = total_cost / priority_factor, so priority-1 work wins ties.
 
 Hard constraints (candidate is excluded, with the reason recorded):
@@ -27,7 +30,7 @@ import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from functools import lru_cache
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 import pandas as pd
 import yaml
@@ -196,7 +199,7 @@ def _build_context(op: pd.Series, mc: pd.Series, task: pd.Series, site: pd.Serie
 
 # ── Scoring ───────────────────────────────────────────────────────────────────
 
-class _Scorer:
+class WeightedScorer:
     """Scores candidates; caches predictions and safety checks within one run."""
 
     def __init__(self, data: SiteData):
@@ -235,6 +238,44 @@ class _Scorer:
         if key not in self._safety_cache:
             self.prefetch_safety([(op, mc, task, when, shift_min)])
         return self._safety_cache[key]
+
+    def skill_bonus_score(self, task: Mapping[str, Any], operator_skills: Any) -> float:
+        """
+        Multiplier for time_cost: `time_cost_multiplier` (0.8 = 20 % bonus) when the
+        operator's task skill matches the task, else 1.0 (neutral, never a penalty).
+
+        Specialised task (required level in `specialized_levels`): only
+        `specialized_match_levels` (expert) match.
+        Other tasks: match on task_skill_level >= required, unless `specialized_only`
+        is true (default), in which case they are always neutral. Every assignable
+        operator already meets the required level, so a bonus there cannot change
+        who is picked; it only makes ordinary work look cheaper than specialised
+        work and pulls experts onto it (docs/DECISIONS.md D046).
+        `operator_skills` is an operator row/dict with `task_skill_level`, or a level string.
+        Unknown or missing skill levels fall back to neutral.
+        """
+        cfg = self.cfg["skill_bonus"]
+        level = operator_skills if isinstance(operator_skills, str) else             (operator_skills.get("task_skill_level") if operator_skills is not None else None)
+        required = task.get("required_skill_level")
+        if level not in SKILL_RANK or required not in SKILL_RANK:
+            return 1.0
+        if required in cfg["specialized_levels"]:
+            matched = level in cfg["specialized_match_levels"]
+        else:
+            matched = not cfg["specialized_only"] and SKILL_RANK[level] >= SKILL_RANK[required]
+        return float(cfg["time_cost_multiplier"]) if matched else 1.0
+
+    def calculate_total_score(self, breakdown: Dict[str, float], task: Mapping[str, Any],
+                              operator_skills: Any) -> Tuple[Dict[str, float], float, float, float]:
+        """
+        Apply the skill bonus to time_cost, then sum the weighted components.
+        Returns (adjusted breakdown, total_cost, priority-weighted score, skill multiplier).
+        """
+        multiplier = self.skill_bonus_score(task, operator_skills)
+        adjusted = {**breakdown, "time_cost": round(breakdown["time_cost"] * multiplier, 2)}
+        total = round(sum(adjusted.values()), 2)
+        factor = float(self.cfg["priority_factor"][int(task["priority"])])
+        return adjusted, total, round(total / factor, 2), multiplier
 
     def score(self, op: pd.Series, mc: pd.Series, task: pd.Series, when: datetime,
               shift_elapsed_min: float = 0.0, prev_location: Optional[str] = None,
@@ -298,11 +339,13 @@ class _Scorer:
             "transition_cost":       round(transition, 2),
             "safety_condition_risk": round(safety_risk, 2),
         }
-        total = round(sum(breakdown.values()), 2)
-        factor = float(self.cfg["priority_factor"][int(task["priority"])])
+        breakdown, total, score, multiplier = self.calculate_total_score(breakdown, task, op)
+        if multiplier < 1.0:
+            reasons.append(f"skill bonus: {op['task_skill_level']} operator for "
+                           f"{task['required_skill_level']} task (time cost x{multiplier:g})")
         reasons.insert(0, f"priority {int(task['priority'])}")
         return Candidate(op["operator_id"], mc["machine_id"], task["task_id"], start, end_p50,
-                         eta, fuel, pred.confidence, breakdown, total, round(total / factor, 2),
+                         eta, fuel, pred.confidence, breakdown, total, score,
                          met, at_risk, flags, reasons), None
 
 
@@ -344,7 +387,7 @@ def rank_assignments(operators: Optional[pd.DataFrame] = None,
     pool = _open_pool(all_tasks, pool_size or load_settings()["candidate_pool_size"])
     completed = _completed(data.tasks)
 
-    scorer = _Scorer(data)
+    scorer = WeightedScorer(data)
     excluded: Dict[str, int] = {}
     feasible = []
     for _, task in pool.iterrows():
@@ -418,7 +461,7 @@ def generate_plan(tasks: Optional[List[str]], session_context: SessionContext,
     location = session_context.task.location if session_context.task else None
     attachment = mc["attachment_type"]
     completed = _completed(data.tasks)
-    scorer = _Scorer(data)
+    scorer = WeightedScorer(data)
 
     steps, excluded, remaining = [], {}, pool.copy()
     while not remaining.empty:
