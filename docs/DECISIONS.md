@@ -369,4 +369,25 @@ Member 1's branch adds a decision also numbered **D007** (BehaviorResult unit co
 
 ---
 
+## OPEN-02 — No demo operator triggers training
+
+**Needs a decision before the demo.** Running Member 1's real `analyze_behavior` over 600 sessions and feeding each operator's history into the training gate:
+
+- the gate fires for **5 of 30 operators** — a healthy rate, discriminating rather than rubber-stamping
+- the five are **OP1007, OP1016, OP1024, OP1027, OP1030**
+- **none of OP1001, OP1002 or OP1003 fire** — and those are the only three with registered faces
+
+So the flagship Safety → Behavior → Training loop cannot be demonstrated through the face-login path. You log in as OP1003 and Training never triggers. OP1003's gate reasons are `operator_residual_is_favourable` and `issue_not_repeated_enough` — that operator actually performs *better* than expected.
+
+Gate health for reference: confidence median 0.67 with 33% clearing the 0.70 threshold; attribution mix 267 context-driven / 190 operator-driven / 73 insufficient / 70 mixed; 52% of residuals unfavourable. The gate is working, it just does not select a demo operator.
+
+**Options:**
+1. Ask Member 1 to give one of OP1001–OP1003 a coachable idle pattern in the generator — repeated operator-driven elevated idle with confidence above 0.70. This is shaping *demo* data so the demo path is covered, not fabricating a result.
+2. Demo the login as OP1003 and switch to OP1027 (fires on 10/10 occurrences, confidence 0.785) for the training section, stating plainly that it is a different operator.
+3. Register a team face against one of the five firing operators, deviating from the OP1001–OP1003 convention.
+
+Option 1 is cleanest; option 2 needs no changes and stays honest.
+
+---
+
 _Add new decisions here as they arise. Do not silently make assumptions._
