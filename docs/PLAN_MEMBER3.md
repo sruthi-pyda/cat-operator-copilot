@@ -70,9 +70,21 @@ Port 8502, not Streamlit's default 8501 — the data_repair project's app alread
 
 ## Step 6 — Integration
 
-- [ ] Wire real teammate modules in place of stubs
-- [ ] Telemetry replay drives the dashboard
+- [x] Telemetry replay (`python replay.py --session S004454`) — 16 tests
+- [ ] Wire real teammate modules in place of adapters (blocked on Members 1 and 2)
+- [ ] Replay drives the dashboard live rather than the CLI
 - [ ] End-to-end demo run
+
+### Blocked on other people
+
+- **Face registration for OP1001 and OP1002** — then calibrate `face_confidence_threshold`
+  against a cross-person distribution (D033). OP1003 is registered and verified.
+- **Member 1:** populate `context_explained_component` in the same units as
+  `operator_residual`, or the training gate's difficult-site protection fails open (D025).
+- **Members 1 and 2:** once `predict_task`, `analyze_behavior`, `evaluate_safety`,
+  `generate_plan` and `route_event` exist, the dashboard adapters pick them up with no
+  change here — and `tests/test_dashboard.py` will start failing, which is the intended
+  signal that integration has happened.
 
 ---
 
