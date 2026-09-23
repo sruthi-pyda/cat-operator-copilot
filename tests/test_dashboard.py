@@ -137,4 +137,33 @@ def test_a_real_error_inside_a_feature_is_not_disguised_as_missing(monkeypatch):
 
 def test_resolve_returns_none_for_a_missing_function(monkeypatch):
     monkeypatch.setitem(sys.modules, "features.prediction", types.SimpleNamespace())
+    monkeypatch.setitem(sys.modules, "features.prediction.api", types.SimpleNamespace())
+    assert resolve(FEATURE_PREDICTION, "predict_task") is None
+
+
+def test_a_contract_function_in_the_api_submodule_is_found(monkeypatch):
+    """Member 1 put predict_task in features/prediction/api.py with an empty __init__."""
+    monkeypatch.setitem(sys.modules, "features.prediction", types.SimpleNamespace())
+    monkeypatch.setitem(
+        sys.modules, "features.prediction.api",
+        types.SimpleNamespace(predict_task=lambda ctx: "from_api"),
+    )
+    assert resolve(FEATURE_PREDICTION, "predict_task")(None) == "from_api"
+
+
+def test_analyze_behavior_is_found_where_it_actually_lives(monkeypatch):
+    """It is implemented in features/prediction/api.py, not features/behavior/."""
+    monkeypatch.setitem(sys.modules, "features.behavior", types.SimpleNamespace())
+    monkeypatch.setitem(
+        sys.modules, "features.prediction.api",
+        types.SimpleNamespace(analyze_behavior=lambda ctx: "behaviour"),
+    )
+    assert resolve("behavior", "analyze_behavior")(None) == "behaviour"
+
+
+def test_a_non_callable_attribute_is_not_mistaken_for_the_contract(monkeypatch):
+    monkeypatch.setitem(
+        sys.modules, "features.prediction", types.SimpleNamespace(predict_task="not a function"),
+    )
+    monkeypatch.setitem(sys.modules, "features.prediction.api", types.SimpleNamespace())
     assert resolve(FEATURE_PREDICTION, "predict_task") is None

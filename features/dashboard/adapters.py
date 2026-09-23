@@ -58,13 +58,38 @@ FEATURE_OWNERS = {
 }
 
 
+# Where a contract function may live. The package itself is the intended home --
+# `from .api import predict_task` in features/prediction/__init__.py makes the
+# contract explicit. The extra paths exist because a package __init__ left empty
+# is an easy thing to forget, and a silently unintegrated feature shows on the
+# dashboard as "not integrated yet" rather than as an error anyone would chase.
+#
+# `features.prediction.api` is listed under behavior because that is where
+# `analyze_behavior` is actually implemented, not a guess.
+CONTRACT_MODULES: dict[str, tuple[str, ...]] = {
+    FEATURE_PREDICTION: ("features.prediction", "features.prediction.api"),
+    FEATURE_BEHAVIOR: (
+        "features.behavior",
+        "features.behavior.behavior_model",
+        "features.prediction.api",
+    ),
+    FEATURE_SAFETY: ("features.safety", "features.safety.api"),
+    FEATURE_OPTIMIZATION: ("features.optimization", "features.optimization.api"),
+    FEATURE_ATTENTION: ("features.attention", "features.attention.api"),
+}
+
+
 def resolve(feature: str, function_name: str) -> Optional[Callable]:
     """Return the contract function for a feature, or None if not integrated."""
-    try:
-        module = importlib.import_module(f"features.{feature}")
-        return getattr(module, function_name)
-    except (ImportError, AttributeError):
-        return None
+    for module_path in CONTRACT_MODULES.get(feature, (f"features.{feature}",)):
+        try:
+            module = importlib.import_module(module_path)
+        except ImportError:
+            continue
+        function = getattr(module, function_name, None)
+        if callable(function):
+            return function
+    return None
 
 
 def _call(feature: str, function_name: str, *args, **kwargs) -> AdapterResult:

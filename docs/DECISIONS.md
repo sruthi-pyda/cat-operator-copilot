@@ -319,4 +319,36 @@ Until the optimizer is integrated the banner says "Conditions changed since the 
 
 ---
 
+## D036 — Contract functions are resolved from the package or its `api` submodule
+
+**Decision:** `adapters.resolve()` tries `features.<feature>` first, then `features.<feature>.api`, and for behavior also `features.prediction.api`.
+
+**Reason:** Member 1's `predict_task` and `analyze_behavior` live in `features/prediction/api.py` while both `features/behavior/__init__.py` and `features/prediction/__init__.py` are empty. Resolving only the package would have reported both features as "not integrated yet" after they were integrated — a silent failure nobody would chase, because that message is the expected state.
+
+**Preferred fix, for Member 1:** add `from .api import predict_task, predict_fuel` to `features/prediction/__init__.py` and re-export `analyze_behavior` from `features/behavior/__init__.py`. The extra resolution paths stay as a safety net, not as the contract.
+
+**Also:** `analyze_behavior` currently lives in the prediction package though file ownership places Behavior in `features/behavior/`. Worth moving, or recording as deliberate.
+
+---
+
+## D037 — The training gate does NOT use `BehaviorResult.context_share()`
+
+**Decision:** `features/training/trigger.py` keeps its own `context_share()`. The shared helper is not adopted.
+
+**Reason — the zero case differs, and the difference is dangerous.** Both compute `|context| / (|operator| + |context|)`, but for a zero gap the shared helper returns **0.0** while this gate returns **1.0** (D022).
+
+`0.0` passes the "context is not dominant" check. So an operator whose observed behaviour matched expectation exactly — no measurable deviation at all — would become coachable if the issue repeated with high confidence. That is the precise failure D022 exists to prevent.
+
+A test pins the divergence so that "removing the duplication" later fails loudly rather than silently inverting the protection.
+
+**Ask for Member 1:** change the helper's zero case to `1.0`, or document why a zero gap should be attributable to the operator. Until then the two must stay separate.
+
+---
+
+## Numbering collision — two D007 entries
+
+Member 1's branch adds a decision also numbered **D007** (BehaviorResult unit contract). This file's D007 is the project-local virtual environment. Both are legitimate; the numbers need reconciling when the branches meet in `develop`. Suggest renumbering the incoming one.
+
+---
+
 _Add new decisions here as they arise. Do not silently make assumptions._

@@ -254,6 +254,27 @@ def test_context_share_of_a_zero_gap_fails_closed():
     ) is None
 
 
+def test_gate_does_not_adopt_the_shared_helpers_zero_case():
+    """`BehaviorResult.context_share()` in shared/schemas.py returns 0.0 for a zero
+    gap; this gate returns 1.0.
+
+    The difference is not cosmetic. 0.0 passes the "context is not dominant" check,
+    so an operator with no measurable deviation at all would become coachable. This
+    test exists so that swapping in the shared helper to "remove duplication" fails
+    loudly instead of silently inverting the protection. Raised with Member 1.
+    """
+    zero_gap = behavior(operator_residual=0.0, context_explained_component=0.0)
+    assert context_share(zero_gap) == 1.0
+
+    shared_helper_value = 0.0
+    assert context_share(zero_gap) != shared_helper_value
+    assert check_training_trigger(
+        repeated(4, operator_residual=0.0, context_explained_component=0.0),
+        operator_id=OPERATOR,
+        issue_type=ISSUE,
+    ) is None
+
+
 def test_negative_residual_still_counts_as_operator_signal():
     assert context_share(behavior(operator_residual=-0.09, context_explained_component=0.01)) == pytest.approx(0.1)
 
