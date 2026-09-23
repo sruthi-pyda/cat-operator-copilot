@@ -32,8 +32,10 @@ from features.dashboard.attention_candidates import (  # noqa: E402
 )
 from features.dashboard.data import DashboardData, MissingDatasetError  # noqa: E402
 from features.dashboard.replan import describe_context_change, replan_reason  # noqa: E402
+from features.dashboard.replay import TelemetryReplay  # noqa: E402
 from features.passport.authorization import check_authorization  # noqa: E402
 from features.training.lessons import load_content  # noqa: E402
+from features.training.peer import find_similar, load_peer_examples  # noqa: E402
 from features.training.progress import compare_metrics, next_escalation_state, score_quiz  # noqa: E402
 from features.training.trigger import (  # noqa: E402
     ESCALATION_ESCALATED,
@@ -235,6 +237,41 @@ def render_conditions(context) -> None:
 def render_live_operation(data: DashboardData, session_id: str, context, events: pd.DataFrame) -> None:
     st.subheader("Live operation")
 
+    steps = list(TelemetryReplay(data, session_id).steps())
+    if steps:
+        position = st.slider(
+            "Replay position", 0, len(steps) - 1, 0,
+            help="Drag to move through the recorded shift.",
+        )
+        step = steps[position]
+        st.progress((position + 1) / len(steps), text=f"Step {position + 1} of {len(steps)}")
+
+        columns = st.columns(4)
+        columns[0].metric("Time", step.timestamp[11:19])
+        columns[1].metric("Machine state", step.machine_state)
+        columns[2].metric("Buddy", "available" if step.buddy_available else "blocked")
+        columns[3].metric(
+            "Worker distance",
+            f"{step.worker_distance_m:.1f} m" if step.worker_distance_m is not None else "—",
+        )
+
+        if step.safety_events:
+            for event in step.safety_events:
+                st.error(
+                    f"{event.get('severity')} — {event.get('trigger_reason')} "
+                    f"(action: {event.get('required_action')})"
+                )
+        if not step.buddy_available:
+            st.caption("Buddy blocked here: " + ", ".join(step.safe_state.reasons))
+
+        seen = sum(len(s.safety_events) for s in steps[: position + 1])
+        st.caption(
+            f"{seen} safety event(s) recorded up to this point in the shift. "
+            "The Buddy verdict is evaluated live from this row, not replayed."
+        )
+    else:
+        st.caption("No telemetry for this session, so there is nothing to replay.")
+
     behavior = adapters.get_behavior(context)
     if not behavior.available:
         unavailable(behavior)
@@ -326,18 +363,68 @@ def render_buddy(context, telemetry: pd.DataFrame, events: pd.DataFrame) -> None
             st.write(response.to_dict())
 
 
-def render_training(operator_id: str) -> None:
+def render_training(operator_id: str, context) -> None:
     st.subheader("Training Hub")
     content = load_content()
-    gate_tab, lesson_tab, measure_tab = st.tabs(
-        ["Gate", "Lesson, scenario and quiz", "Measured improvement"]
+    gate_tab, lesson_tab, peer_tab, measure_tab = st.tabs(
+        ["Gate", "Lesson, scenario and quiz", "Peer techniques", "Measured improvement"]
     )
     with gate_tab:
         render_training_gate(operator_id)
     with lesson_tab:
         render_lesson(content)
+    with peer_tab:
+        render_peer(context)
     with measure_tab:
         render_measurement()
+
+
+def render_peer(context) -> None:
+    st.caption(
+        "How other operators handled a comparable task in comparable conditions. "
+        "Sources are anonymised, only approved examples are shown, and the similarity "
+        "score is always visible — an easy site is not advice for hard ground."
+    )
+    try:
+        examples = load_peer_examples()
+    except FileNotFoundError as exc:
+        st.warning(str(exc))
+        return
+
+    columns = st.columns(2)
+    floor = columns[0].slider("Minimum context similarity", 0.0, 1.0, 0.5, 0.05)
+    same_site = columns[1].checkbox("Same site condition only", value=False)
+
+    matches = find_similar(
+        examples,
+        task_type=context.task.task_type,
+        machine_type=context.machine.machine_type,
+        site_condition=context.site.surface if same_site else None,
+        min_similarity=floor,
+    )
+
+    st.caption(
+        f"Matching on task `{context.task.task_type}` and machine `{context.machine.machine_type}`"
+        + (f", surface `{context.site.surface}`" if same_site else "")
+    )
+
+    if not matches:
+        st.info(
+            "No approved peer example is similar enough to this context. Nothing is shown "
+            "rather than offering advice from conditions that do not match."
+        )
+        return
+
+    for example in matches:
+        with st.expander(
+            f"{example.source_operator_anonymized_id} — similarity "
+            f"{example.context_similarity_score:.2f}"
+        ):
+            st.write(example.technique_description)
+            st.caption(
+                f"Site: {example.site_condition} · attachment: {example.attachment_type} · "
+                f"observed: {example.observed_metric}"
+            )
 
 
 def render_lesson(content) -> None:
@@ -535,7 +622,7 @@ def main() -> None:
     st.divider()
     render_buddy(context, telemetry, events)
     st.divider()
-    render_training(operator_id)
+    render_training(operator_id, context)
     st.divider()
     render_end_of_shift(data, session_id)
 

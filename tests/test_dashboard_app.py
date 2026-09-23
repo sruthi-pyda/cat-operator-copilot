@@ -62,6 +62,18 @@ def test_every_required_dashboard_section_is_present(app):
 
 
 @dataset_required
+def test_live_operation_can_be_replayed(app):
+    assert "Replay position" in [s.label for s in app.slider]
+
+
+@dataset_required
+def test_peer_learning_states_its_sharing_rules_on_screen(app):
+    captions = " ".join(element.value for element in app.caption)
+    assert "Sources are anonymised" in captions
+    assert "only approved examples are shown" in captions
+
+
+@dataset_required
 def test_the_replan_banner_names_what_changed(app):
     """Selecting a later session must produce a reason, not a bare new order."""
     session = next(s for s in app.selectbox if s.label == "Session")
