@@ -27,6 +27,7 @@ from features.buddy.retrieval import retrieve  # noqa: E402
 from features.buddy.safe_state import MachineStateSnapshot, evaluate_safe_state  # noqa: E402
 from features.dashboard import adapters  # noqa: E402
 from features.dashboard.data import DashboardData, MissingDatasetError  # noqa: E402
+from features.dashboard.replan import describe_context_change, replan_reason  # noqa: E402
 from features.passport.authorization import check_authorization  # noqa: E402
 from features.training.lessons import load_content  # noqa: E402
 from features.training.progress import compare_metrics, next_escalation_state, score_quiz  # noqa: E402
@@ -93,6 +94,46 @@ def render_plan(context) -> None:
         )
         return
     st.write(result.value)
+
+
+def render_replan(data: DashboardData, sessions: pd.DataFrame, session_id: str, context) -> None:
+    st.subheader("Replanning")
+    operator_sessions = sessions[sessions.operator_id == context.operator_id]
+    ordered = operator_sessions.sort_values("start_timestamp").session_id.tolist()
+    position = ordered.index(session_id)
+
+    if position == 0:
+        st.caption("Earliest session for this operator — nothing to compare against.")
+        return
+
+    previous = data.build_session_context(ordered[position - 1])
+    changes = describe_context_change(previous, context)
+    plan = adapters.get_plan(tasks=None, session_context=context)
+
+    if not changes:
+        st.caption("No material change in operating context since the previous session.")
+    elif plan.available:
+        st.warning(f"**Plan changed**\n\nReason: {replan_reason(changes)}")
+    else:
+        st.warning(
+            f"**Conditions changed since the previous session**\n\n"
+            f"Reason: {replan_reason(changes)}"
+        )
+        st.caption(
+            "No plan has been recalculated — Optimal Task Sequencing is not integrated yet "
+            f"(owner: {plan.owner}). Deciding whether this warrants a replan is that "
+            "feature's call, not the dashboard's."
+        )
+
+    for change in changes:
+        st.markdown(f"- {change.detail()}")
+
+    if changes:
+        st.caption(
+            "Compared against this operator's previous session, which may be at a different "
+            "location — so a site change can appear here alongside a genuine weather change. "
+            "A true within-shift comparison needs the telemetry replay."
+        )
 
 
 def render_prediction(context) -> None:
@@ -436,6 +477,8 @@ def main() -> None:
     render_header(context, operator, machine, events)
     st.divider()
     render_plan(context)
+    st.divider()
+    render_replan(data, sessions, session_id, context)
     st.divider()
     render_prediction(context)
     st.divider()

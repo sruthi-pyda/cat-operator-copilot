@@ -56,9 +56,22 @@ def test_every_required_dashboard_section_is_present(app):
     for section in (
         "Shift status", "Plan", "Prediction", "Conditions",
         "Live operation", "Operating Buddy", "Training Hub",
-        "End of shift",
+        "Replanning", "End of shift",
     ):
         assert section in headings
+
+
+@dataset_required
+def test_the_replan_banner_names_what_changed(app):
+    """Selecting a later session must produce a reason, not a bare new order."""
+    session = next(s for s in app.selectbox if s.label == "Session")
+    session.set_value(session.options[3]).run()
+    text = " ".join(
+        [e.value for e in app.warning] + [e.value for e in app.caption]
+        + [e.value for e in app.markdown]
+    )
+    assert "Conditions changed since the previous session" in text
+    assert "No plan has been recalculated" in text
 
 
 @dataset_required

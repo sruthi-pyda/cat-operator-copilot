@@ -297,4 +297,26 @@ PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -m streamlit run app/ui/dashboar
 
 ---
 
+## D034 — Approved manual snippets are synthetic, and keywords must be specific
+
+**Decision:** `features/buddy/content/machine_manual.yaml` holds nine generic operating snippets, explicitly marked synthetic. A test asserts no snippet claims to be manufacturer documentation.
+
+**Why it exists at all:** `buddy.ask()` discards every non-safety source once a question is safety-critical, so with no manual a safety question could only ever defer. The gate looked correct while the cupboard was empty.
+
+**Keyword lesson:** `danger` was initially a keyword on the emergency snippet. Because it appears in almost every safety question, the Buddy answered *uncovered* questions with emergency-stop guidance — a confident-looking answer to a question nobody had addressed. Manual keywords must be specific enough that a non-match is a real non-match.
+
+---
+
+## D035 — The replan banner describes; Optimization decides
+
+**Decision:** `features/dashboard/replan.py` reports *what changed* in the operating context and phrases the reason ("rain increased + congestion increased"). It never decides whether a replan is warranted — that is `should_replan()` in Optimization (Member 2).
+
+Until the optimizer is integrated the banner says "Conditions changed since the previous session" and states plainly that no plan has been recalculated, rather than "Plan changed", which would imply a reordering nobody computed.
+
+**Per-field noise thresholds** (rain 0.5 mm, visibility 100 m, temperature 3 °C, hardness 0.05, slope 1°) stop sensor jitter reading as a change.
+
+**Known limitation:** the dashboard compares the operator's *previous session*, which may be at a different location, so a site change can appear alongside a weather change. A true within-shift comparison should come from consecutive telemetry rows via the replay, not from two session rows.
+
+---
+
 _Add new decisions here as they arise. Do not silently make assumptions._
