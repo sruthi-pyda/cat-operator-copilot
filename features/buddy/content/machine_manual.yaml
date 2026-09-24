@@ -95,7 +95,12 @@ snippets:
   - snippet_id: M008
     topic: refuelling
     title: Refuelling
-    keywords: [fuel, refuel, refuelling, refueling, diesel, tank, fill]
+    # NOT a bare "fuel": this snippet is about the refuelling procedure, not the
+    # fuel level. "How much fuel is left" is an operational question telemetry
+    # answers, and because the manual outranks telemetry a bare keyword here made
+    # the Buddy reply with refuelling safety guidance and report a spurious
+    # conflict between two sources answering different questions.
+    keywords: [refuel, refuelling, refueling, fill the tank, filling the tank, fuel spill]
     content: >-
       Shut the engine down and let it cool before refuelling. No smoking or open flame
       near the fill point, and keep the nozzle in contact with the filler neck to avoid

@@ -13,6 +13,7 @@ prediction as though they were one.
 from __future__ import annotations
 
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -476,7 +477,17 @@ def render_buddy(context, telemetry: pd.DataFrame, events: pd.DataFrame) -> None
             telemetry_row=telemetry_row,
             safety_events=events.to_dict(orient="records") if not events.empty else (),
         )
-        response = ask(question, snapshot, evidence)
+        # Freshness is judged against the moment being replayed, not wall-clock.
+        # The recorded shifts are months old, so using "now" would mark every
+        # piece of session evidence stale and the Buddy would refuse to answer.
+        as_of = None
+        for stamp in (telemetry_row.get("timestamp"), context.timestamp):
+            try:
+                as_of = datetime.fromisoformat(str(stamp))
+                break
+            except (TypeError, ValueError):
+                continue
+        response = ask(question, snapshot, evidence, as_of=as_of)
         if response.answered:
             st.success(response.answer)
         else:
