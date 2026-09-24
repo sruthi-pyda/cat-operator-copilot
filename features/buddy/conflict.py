@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Optional, Sequence
 
-from features.buddy.evidence import Evidence
+from features.buddy.evidence import SOURCE_MACHINE_MANUAL, SOURCE_SAFETY_INCIDENT, Evidence
 
 RESOLUTION_NO_CONFLICT = "no_conflict"
 RESOLUTION_BY_AUTHORITY = "resolved_by_authority"
@@ -51,17 +51,53 @@ def _values_agree(left: Any, right: Any) -> bool:
     return str(left).strip().lower() == str(right).strip().lower()
 
 
+# Sources that naturally report a list rather than a single fact. A session has
+# many safety events and several manual snippets can match one question; two of
+# them differing is not a contradiction. Every other source answers "what is X",
+# so two differing values from it genuinely IS a conflict and must still defer.
+MULTI_VALUED_SOURCES = frozenset({SOURCE_SAFETY_INCIDENT, SOURCE_MACHINE_MANUAL})
+
+
+def _collapse_multi_valued(items: Sequence[Evidence]) -> list[Evidence]:
+    """Keep one representative from each naturally multi-valued source.
+
+    Without this, a session holding a CRITICAL and a MEDIUM incident looked like
+    one source contradicting itself, and the Buddy deferred on questions it could
+    answer. Callers order items most-severe-first, so the representative kept is
+    the one that matters.
+    """
+    collapsed: list[Evidence] = []
+    seen: set[str] = set()
+    for item in items:
+        if item.source in MULTI_VALUED_SOURCES:
+            if item.source in seen:
+                continue
+            seen.add(item.source)
+        collapsed.append(item)
+    return collapsed
+
+
 def detect_conflict(items: Sequence[Evidence]) -> ConflictResult:
     if not items:
         return ConflictResult(conflicted=False, resolution=RESOLUTION_NO_CONFLICT)
 
     sources = tuple(item.source for item in items)
     values = tuple(item.value for item in items)
-    reference = items[0].value
-    conflicted = any(not _values_agree(reference, item.value) for item in items[1:])
+    everything = _collapse_multi_valued(items)
+
+    # The approved manual states guidance; every other source states a fact about
+    # this machine or shift. They answer different questions, so they cannot
+    # contradict each other -- comparing them produced "sources disagree" between
+    # a refuelling procedure and a fuel gauge. The manual can still win on
+    # authority; it just never counts as a dissenting voice.
+    factual = [item for item in everything if item.source != SOURCE_MACHINE_MANUAL]
+    comparable = factual or everything
+
+    reference = comparable[0].value
+    conflicted = any(not _values_agree(reference, item.value) for item in comparable[1:])
 
     if not conflicted:
-        winner = max(items, key=lambda item: item.authority)
+        winner = max(everything, key=lambda item: item.authority)
         return ConflictResult(
             conflicted=False,
             resolution=RESOLUTION_NO_CONFLICT,
@@ -70,7 +106,7 @@ def detect_conflict(items: Sequence[Evidence]) -> ConflictResult:
             sources=sources,
         )
 
-    ranked = sorted(items, key=lambda item: item.authority, reverse=True)
+    ranked = sorted(comparable, key=lambda item: item.authority, reverse=True)
     top_authority = ranked[0].authority
     tied = [item for item in ranked if item.authority == top_authority]
 

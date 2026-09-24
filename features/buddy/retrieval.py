@@ -141,7 +141,20 @@ def retrieve(
             )
         )
 
-    for event in safety_events:
+    # Gated like every other source. Attaching incidents to every question let a
+    # CRITICAL event outrank the telemetry on "how much fuel is left" and answer
+    # the wrong question -- the highest-authority source is not automatically the
+    # relevant one.
+    #
+    # Most severe first, so the representative kept for conflict detection is the
+    # one that matters: a session can hold several incidents of different severity.
+    severity_rank = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
+    ordered_events = (
+        sorted(safety_events,
+               key=lambda e: severity_rank.get(str(e.get("severity", "")).upper(), 9))
+        if _mentions(question, SAFETY_WORDS) else ()
+    )
+    for event in ordered_events:
         evidence.append(
             Evidence(
                 source=SOURCE_SAFETY_INCIDENT,

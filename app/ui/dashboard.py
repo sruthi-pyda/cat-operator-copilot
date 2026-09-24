@@ -189,6 +189,7 @@ _SEVERITY_COLOR = {
 
 
 SCENARIO_CARD_TEMPLATE = Path(__file__).with_name("demo_selector.html")
+MEDIA_DIR = PROJECT_ROOT / "features" / "training" / "content" / "media"
 
 
 def render_scenario_card(scenario) -> str:
@@ -296,6 +297,58 @@ def render_header(context, operator, machine, events: pd.DataFrame) -> None:
             "Authorization refused: " + ", ".join(authorization.reasons)
             + ". No session may be opened for this operator on this machine."
         )
+
+
+def render_profile(operator, context) -> None:
+    """The Passport's own data. It was loaded and used but never shown -- the
+    behaviour model reads these baselines, so an operator should be able to see
+    what they are being measured against."""
+    if operator is None:
+        st.info("No operator record found for this session.")
+        return
+
+    baseline = operator.baseline
+    identity = [
+        ("name", operator.name or "—"),
+        ("role", operator.role or "—"),
+        ("experience", f"{operator.years_experience:g} yrs" if operator.years_experience else "—"),
+        ("machine skill", operator.machine_skill_level or "—"),
+        ("task skill", operator.task_skill_level or "—"),
+    ]
+    clearance = [
+        ("certification", operator.certification_status or "—"),
+        ("expires", str(operator.certification_expiry or "—")),
+        ("rated for", ", ".join(operator.authorized_machine_types) or "—"),
+        ("face enrolled", "yes" if operator.face_registered else "no"),
+        ("training", operator.training_status or "—"),
+    ]
+    baselines = [
+        ("idle ratio", f"{baseline.idle_ratio:.3f}" if baseline.idle_ratio is not None else "—"),
+        ("cycle time", f"{baseline.cycle_time_sec:.0f} s" if baseline.cycle_time_sec else "—"),
+        ("fuel / cycle", f"{baseline.fuel_l_per_cycle:.2f} L" if baseline.fuel_l_per_cycle else "—"),
+        ("safety event rate",
+         f"{baseline.safety_event_rate:.3f}" if baseline.safety_event_rate is not None else "—"),
+        ("recent workload",
+         f"{operator.recent_workload_hours:.0f} h" if operator.recent_workload_hours else "—"),
+        ("fatigue proxy",
+         f"{operator.fatigue_proxy:.2f}" if operator.fatigue_proxy is not None else "—"),
+    ]
+
+    def block(heading, rows):
+        body = "".join(
+            f'<div class="item"><span class="lbl">{_esc(k)}</span>'
+            f'<span class="val">{_esc(v)}</span></div>' for k, v in rows
+        )
+        return f'<div class="panel"><h4>{heading}</h4><div class="cond">{body}</div></div>'
+
+    _html(block("Identity and skill", identity))
+    _html(block("Clearance", clearance))
+    _html(block("Personal baseline", baselines))
+    st.caption(
+        "These baselines are what the Behavioural Fingerprint measures against — the expected "
+        "idle ratio for this operator under given conditions starts here, not from a fleet "
+        "average. Shown so the operator can see what they are compared to."
+    )
 
 
 def render_safety(events: pd.DataFrame) -> None:
@@ -870,6 +923,26 @@ def render_lesson(content) -> None:
 
     st.markdown(f"**{lesson.title}** · {lesson.duration_min} min · covers: "
                 f"{', '.join(lesson.issue_types)}")
+
+    if lesson.video_url:
+        source = lesson.video_url
+        local = MEDIA_DIR / Path(source).name
+        # A local file under content/media/ wins; anything else is passed through
+        # as a URL. A missing local file says so instead of failing silently.
+        if not source.lower().startswith(("http://", "https://")):
+            if local.exists():
+                st.video(str(local))
+            else:
+                st.warning(f"Lesson video not found: {local}")
+        else:
+            st.video(source)
+    else:
+        st.caption(
+            "No video attached to this lesson. To add one, drop an mp4 into "
+            "`features/training/content/media/` and set `video_url` on the lesson "
+            "in `lessons.yaml` — a filename for a local file, or a full URL."
+        )
+
     st.write(lesson.summary)
     if lesson.objectives:
         st.markdown("**Objectives**")
@@ -1165,9 +1238,11 @@ def main() -> None:
 
     safe_section(render_live_operation, data, session_id, context, events, name="Live operation")
 
-    attention_tab, buddy_tab, training_tab, shift_tab = st.tabs(
-        ["Attention queue", "Operating Buddy", "Training Hub", "End of shift"]
+    profile_tab, attention_tab, buddy_tab, training_tab, shift_tab = st.tabs(
+        ["Operator profile", "Attention queue", "Operating Buddy", "Training Hub", "End of shift"]
     )
+    with profile_tab:
+        safe_section(render_profile, operator, context, name="Operator profile")
     with attention_tab:
         safe_section(render_attention, events, changes, telemetry, name="Attention queue")
     with buddy_tab:

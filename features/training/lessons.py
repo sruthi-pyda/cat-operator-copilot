@@ -111,6 +111,10 @@ class Lesson:
     objectives: tuple[str, ...] = ()
     key_points: tuple[str, ...] = ()
     practice_prompt: str = ""
+    # Optional lesson video: a path under features/training/content/media/ or a
+    # URL. Empty means no video is attached, which the UI states plainly rather
+    # than rendering a broken player.
+    video_url: str = ""
     disclaimer: str = ""
     synthetic_flag: bool = True
 
@@ -243,6 +247,7 @@ def _parse_lesson(raw: dict[str, Any], disclaimer: str, synthetic: bool) -> Less
         objectives=_tuple_of_str(raw.get("objectives")),
         key_points=_tuple_of_str(raw.get("key_points")),
         practice_prompt=str(raw.get("practice_prompt", "") or ""),
+        video_url=str(raw.get("video_url", "") or ""),
         disclaimer=disclaimer,
         synthetic_flag=bool(raw.get("synthetic_flag", synthetic)),
     )
