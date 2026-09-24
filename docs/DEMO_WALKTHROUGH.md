@@ -69,8 +69,12 @@ later. We surface the decision rather than the raw profile.")*
 Let the red banner sit for two seconds before speaking.
 
 **Say:**
-> "Worker at 9.1 metres. Closing speed just over 2 metres a second. Machine swinging.
+> "Worker at 10.4 metres. Closing speed 1.87 metres a second. Machine swinging.
 > Critical — emergency stop."
+
+*(Same operator you logged in as. The plan is empty on this one because they're eight hours
+into the shift — if anyone notices, that's the fatigue rule, and it's worth saying: "no further
+tasks are assigned to this operator today.")*
 
 **Do:** Scenario → **`Safety — INFO — a nearby worker that is not a hazard`**.
 Scroll to Live operation → Event log.
@@ -193,6 +197,10 @@ Scroll to Live operation → **Behavioural fingerprint**.
 > Across thirty operators this fires for five. It discriminates rather than rubber-stamps."
 
 > "An operator working hard ground never gets coached for the ground."
+
+*(Optional contrast — scenario `Behaviour & Training — No coaching — a different operator, gate
+holds`. Say plainly that this is a different operator: "Same gate, different operator, and here
+it declines to coach." Skip it if you're short on time.)*
 
 **Do:** **Lesson** tab → scroll the lesson → answer two quiz questions → **Submit answers**.
 

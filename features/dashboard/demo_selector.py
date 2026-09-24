@@ -60,14 +60,18 @@ class DemoScenario:
 #   deadlines_met      exact "met/total" string from the plan
 SCENARIOS: tuple[DemoScenario, ...] = (
     # --- Safety -------------------------------------------------------------
+    # OP1001, deliberately: the audience watches a face login as OP1001, so the
+    # critical beat must be that same operator. OP1001's CRITICAL sessions are
+    # all late in the shift, hence the empty plan -- which is worth saying out
+    # loud rather than avoiding, since the fatigue rule is the reason.
     DemoScenario(
         key="critical-proximity",
         title="CRITICAL — worker in the swing path",
         category=CATEGORY_SAFETY,
-        session_id="S001007", operator_id="OP1003",
+        session_id="S004374", operator_id="OP1001",
         show="Safety banner at the top of the page.",
         say="Motion, swing path and closing speed made this critical. Distance alone did not.",
-        expect={"worst_severity": "CRITICAL", "authorized": True, "min_plan_steps": 1},
+        expect={"worst_severity": "CRITICAL", "authorized": True, "plan_empty": True},
     ),
     DemoScenario(
         key="high-swing-envelope",
@@ -196,11 +200,13 @@ SCENARIOS: tuple[DemoScenario, ...] = (
     ),
     DemoScenario(
         key="training-refuses",
-        title="No coaching — the context explains it",
+        title="No coaching — a different operator, gate holds",
         category=CATEGORY_TRAINING,
         session_id="S001007", operator_id="OP1003",
         show="Training Hub → Gate: reasons listed for not firing.",
-        say="An operator on hard ground is not coached for the ground.",
+        # Necessarily a different operator: OP1001's gate fires, so showing it
+        # hold requires someone whose pattern does not qualify. Say so.
+        say="A different operator. Same gate, and here it declines to coach.",
         expect={"authorized": True},
     ),
     DemoScenario(

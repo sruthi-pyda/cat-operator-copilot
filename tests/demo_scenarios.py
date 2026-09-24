@@ -85,6 +85,20 @@ def test_the_dashboard_opens_on_the_registered_operator():
     assert default_label_index() >= 1
 
 
+def test_scenarios_stay_on_the_operator_who_logged_in():
+    """The audience watches a face login as OP1001. A scenario on someone else
+    contradicts what they just saw, so only two may deviate -- and both are cases
+    where a different operator IS the point:
+
+      refused-expired-cert  OP1001's certificate is valid, so the lapsed-cert
+                            refusal cannot be demonstrated with them
+      training-refuses      OP1001's gate fires; showing it hold needs an
+                            operator whose pattern does not qualify
+    """
+    others = {s.key: s.operator_id for s in SCENARIOS if s.operator_id != "OP1001"}
+    assert others == {"refused-expired-cert": "OP1002", "training-refuses": "OP1003"}
+
+
 def test_lookup_helpers_round_trip():
     assert scenario_by_key("full-plan").session_id == "S000146"
     assert scenario_by_key("does-not-exist") is None
