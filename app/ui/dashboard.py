@@ -175,17 +175,28 @@ def render_plan(context) -> None:
             )
             st.caption("Cost units are abstract planning units, not money or minutes alone.")
 
-    excluded = plan.get("excluded") or []
+    excluded = plan.get("excluded") or {}
     if excluded:
-        with st.expander(f"Excluded from the plan ({len(excluded)})"):
+        # The optimizer returns {task_id: reason}; tolerate a list of rows too,
+        # since this is a boundary between two people's code.
+        if isinstance(excluded, dict):
+            rows = [{"task": task, "why it was refused": reason}
+                    for task, reason in excluded.items()]
+        else:
+            rows = [r if isinstance(r, dict) else {"task": str(r)} for r in excluded]
+
+        blocked = sum(1 for r in rows if "CRITICAL" in str(r.get("why it was refused", "")))
+        with st.expander(f"Excluded from the plan ({len(rows)})"):
             st.caption(
-                "Tasks the optimizer refused. A CRITICAL safety finding is a hard block, "
-                "not a cost to trade away."
+                "Tasks the optimizer refused, and why. A CRITICAL safety finding is a hard "
+                "block, not a cost to be traded away against time or fuel."
             )
-            if isinstance(excluded[0], dict):
-                st.dataframe(pd.DataFrame(excluded), width="stretch", hide_index=True)
-            else:
-                st.write(excluded)
+            st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+            if blocked:
+                st.warning(
+                    f"{blocked} task(s) blocked outright on CRITICAL safety findings.",
+                    icon=":material/block:",
+                )
 
 
 def render_replan(data: DashboardData, sessions: pd.DataFrame, session_id: str, context):
