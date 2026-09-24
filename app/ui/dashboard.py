@@ -108,6 +108,11 @@ def render_header(context, operator, machine, events: pd.DataFrame) -> None:
         )
 
 
+def _clock(value: Any) -> str:
+    text = str(value or "")
+    return text[11:16] if len(text) >= 16 else text
+
+
 def render_plan(context) -> None:
     st.subheader("Plan")
     result = adapters.get_plan(tasks=None, session_context=context)
@@ -118,7 +123,68 @@ def render_plan(context) -> None:
             "task with its priority and deadline, and the reason for that ordering."
         )
         return
-    st.write(result.value)
+
+    plan = result.value
+    steps = plan.get("steps") or []
+
+    if not steps:
+        st.info("No feasible task for this operator and machine in this shift.")
+    else:
+        first = steps[0]
+        eta, fuel = first.get("eta_min", {}), first.get("fuel_l", {})
+        st.markdown(f"**Next task — {first.get('task_id')}**")
+        columns = st.columns(4)
+        columns[0].metric("Starts", _clock(first.get("start")))
+        columns[1].metric(
+            "ETA P50", f"{eta.get('p50', 0):.0f} min",
+            f"P10-P90 {eta.get('p10', 0):.0f}-{eta.get('p90', 0):.0f}", delta_color="off",
+        )
+        columns[2].metric("Fuel P50", f"{fuel.get('p50', 0):.1f} L")
+        columns[3].metric("Confidence", f"{first.get('prediction_confidence', 0):.2f}")
+
+        st.dataframe(
+            pd.DataFrame([
+                {
+                    "#": index,
+                    "task": step.get("task_id"),
+                    "start": _clock(step.get("start")),
+                    "ends (P50)": _clock(step.get("end_p50")),
+                    "ETA P50 (min)": round(step.get("eta_min", {}).get("p50", 0), 1),
+                    "fuel P50 (L)": round(step.get("fuel_l", {}).get("p50", 0), 1),
+                    "cost": round(sum(step.get("cost_breakdown", {}).values()), 1),
+                }
+                for index, step in enumerate(steps, start=1)
+            ]),
+            width="stretch", hide_index=True,
+        )
+
+    st.markdown(f"**Why this order:** {plan.get('reason', 'not stated')}")
+
+    columns = st.columns(3)
+    columns[0].metric("Total cost", f"{plan.get('total_cost', 0):.0f}")
+    columns[1].metric("Deadlines met", str(plan.get("deadlines_met", "—")))
+    columns[2].metric("Shift planned", f"{plan.get('shift_minutes_planned', 0):.0f} min")
+
+    breakdown = plan.get("cost_breakdown") or {}
+    if breakdown:
+        with st.expander("Cost breakdown — what the ordering traded off"):
+            st.dataframe(
+                pd.DataFrame([{"component": k, "cost": round(v, 1)} for k, v in breakdown.items()]),
+                width="stretch", hide_index=True,
+            )
+            st.caption("Cost units are abstract planning units, not money or minutes alone.")
+
+    excluded = plan.get("excluded") or []
+    if excluded:
+        with st.expander(f"Excluded from the plan ({len(excluded)})"):
+            st.caption(
+                "Tasks the optimizer refused. A CRITICAL safety finding is a hard block, "
+                "not a cost to trade away."
+            )
+            if isinstance(excluded[0], dict):
+                st.dataframe(pd.DataFrame(excluded), width="stretch", hide_index=True)
+            else:
+                st.write(excluded)
 
 
 def render_replan(data: DashboardData, sessions: pd.DataFrame, session_id: str, context):
@@ -305,7 +371,24 @@ def render_live_operation(data: DashboardData, session_id: str, context, events:
     if not behavior.available:
         unavailable(behavior)
     else:
-        st.write(behavior.value)
+        result = behavior.value
+        st.markdown("**Behavioural fingerprint**")
+        columns = st.columns(4)
+        columns[0].metric("Observed", f"{result.observed_value:.3f}")
+        columns[1].metric("Expected under context", f"{result.expected_value:.3f}")
+        columns[2].metric("Attribution", result.attribution,
+                          f"confidence {result.confidence:.2f}", delta_color="off")
+        columns[3].metric("Coaching eligible", "yes" if result.coaching_eligible else "no")
+        st.caption(
+            f"Of the gap, {result.operator_residual:+.4f} is operator-linked and "
+            f"{result.context_explained_component:+.4f} is explained by site, machine and "
+            "weather conditions."
+        )
+        st.caption(
+            "This says observed behaviour differs from what was expected under the current "
+            "operating context. It is not a judgement that the operator performed badly, and "
+            "a gap the context explains never becomes coaching."
+        )
 
     if events.empty:
         st.caption("No safety events recorded for this session.")
