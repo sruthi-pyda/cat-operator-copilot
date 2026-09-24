@@ -43,6 +43,7 @@ from features.training.trigger import (  # noqa: E402
     ESCALATION_ESCALATED,
     ESCALATION_FIRST,
     ESCALATION_REPEAT,
+    TrainingThresholds,
     evaluate_training_gate,
 )
 from shared.config import load_settings  # noqa: E402
@@ -674,10 +675,88 @@ def render_measurement() -> None:
     )
 
 
+@st.cache_data(show_spinner="Analysing this operator's recent sessions...")
+def recent_behavior_history(synthetic_dir: str, operator_id: str, window: int) -> list:
+    """The operator's most recent sessions, scored by the Behavioral Fingerprint.
+
+    Only the last `window` are fetched because that is all the gate weighs --
+    analysing the operator's whole history would cost minutes for no difference.
+    """
+    data = DashboardData(Path(synthetic_dir))
+    sessions = data.sessions()
+    recent = (
+        sessions[sessions.operator_id == operator_id]
+        .sort_values("start_timestamp")
+        .session_id.tolist()[-window:]
+    )
+    history = []
+    for session_id in recent:
+        result = adapters.get_behavior(data.build_session_context(session_id))
+        if result.available:
+            history.append(result.value)
+    return history
+
+
 def render_training_gate(operator_id: str) -> None:
+    thresholds = TrainingThresholds.from_settings()
+    history = recent_behavior_history(
+        str(DashboardData.from_settings().synthetic_dir), operator_id, thresholds.history_window
+    )
+
+    if not history:
+        st.info("Behavioral Fingerprint is not integrated, so there is no history to gate on.")
+    else:
+        decision = evaluate_training_gate(
+            history, operator_id=operator_id, issue_type="idle_reduction"
+        )
+        st.markdown(f"**Real gate decision for {operator_id}** — issue `idle_reduction`")
+        st.caption(
+            f"From the Behavioral Fingerprint's own output on this operator's last "
+            f"{decision.considered} sessions. Not a simulation."
+        )
+
+        if decision.triggered:
+            trigger = decision.trigger
+            st.success(
+                f"Training triggered — lesson **{trigger.lesson_id}**, "
+                f"attribution **{trigger.attribution_type}**, confidence "
+                f"**{trigger.confidence:.3f}**, escalation **{trigger.escalation_state}**."
+            )
+        else:
+            st.info("No training triggered: " + ", ".join(decision.reasons))
+
+        columns = st.columns(3)
+        columns[0].metric("Qualifying occurrences",
+                          f"{decision.qualifying_occurrences}/{decision.considered}")
+        columns[1].metric("Needs at least", str(thresholds.min_occurrences))
+        columns[2].metric("Confidence floor", f"{thresholds.min_confidence:.2f}")
+
+        with st.expander("Per-session detail — why each one did or did not count"):
+            st.dataframe(
+                pd.DataFrame([
+                    {
+                        "session": o.session_id,
+                        "attribution": o.attribution,
+                        "confidence": round(o.confidence, 3),
+                        "context share": o.context_share,
+                        "counts": "yes" if o.qualifies else "no",
+                        "why not": ", ".join(o.reasons),
+                    }
+                    for o in decision.occurrences
+                ]),
+                width="stretch", hide_index=True,
+            )
+            st.caption(
+                "An occurrence counts only if it is operator-linked, confident, not "
+                "primarily explained by context, and not in the operator's favour — "
+                "all four at once."
+            )
+
+    st.divider()
+    st.markdown("**Explore the gate with manual inputs**")
     st.caption(
-        "Behavioral Fingerprint is not integrated yet, so these inputs are set by hand to "
-        "demonstrate the gate. They are not model output."
+        "A what-if explorer, not model output. Change these to see what would and would "
+        "not trigger coaching."
     )
 
     columns = st.columns(4)
