@@ -175,6 +175,23 @@ html, body, [class*="css"] { font-family:'Inter',system-ui,sans-serif; }
 .log li { display:flex; gap:.7rem; align-items:baseline; padding:.3rem 0;
   border-bottom:1px solid var(--border); font-size:.86rem; }
 .log li:last-child { border-bottom:none; }
+
+.video-ph {
+  background:var(--panel-raised); border:1px solid var(--border);
+  aspect-ratio:16/7; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:.3rem; margin-bottom:.6rem;
+}
+.video-ph__play {
+  width:52px; height:52px; border:1px solid var(--accent); border-radius:50%;
+  color:var(--accent); display:flex; align-items:center; justify-content:center;
+  font-size:1.3rem; padding-left:4px; margin-bottom:.35rem;
+}
+.video-ph__label {
+  font-family:'IBM Plex Mono',monospace; color:var(--text);
+  font-size:1rem; letter-spacing:.04em;
+}
+.video-ph__sub { color:var(--text-muted); font-size:.82rem; }
+.video-ph__note { color:var(--text-muted); font-size:.68rem; margin-top:.5rem; opacity:.75; }
 .log .t { font-family:'IBM Plex Mono',monospace; color:var(--text-muted); }
 .log .dot { width:7px; height:7px; border-radius:50%; display:inline-block; }
 .log .reason { color:var(--text); }
@@ -924,23 +941,33 @@ def render_lesson(content) -> None:
     st.markdown(f"**{lesson.title}** · {lesson.duration_min} min · covers: "
                 f"{', '.join(lesson.issue_types)}")
 
-    if lesson.video_url:
-        source = lesson.video_url
+    # getattr, not lesson.video_url: a long-running Streamlit process keeps the
+    # previously imported Lesson class, so a field added since startup is absent
+    # until restart. Not worth taking the Training Hub down for.
+    source = getattr(lesson, "video_url", "") or ""
+    try:
+        number = list(content.lessons).index(lesson) + 1
+    except ValueError:
+        number = 1
+
+    if source:
         local = MEDIA_DIR / Path(source).name
-        # A local file under content/media/ wins; anything else is passed through
-        # as a URL. A missing local file says so instead of failing silently.
-        if not source.lower().startswith(("http://", "https://")):
-            if local.exists():
-                st.video(str(local))
-            else:
-                st.warning(f"Lesson video not found: {local}")
-        else:
+        if source.lower().startswith(("http://", "https://")):
             st.video(source)
+        elif local.exists():
+            st.video(str(local))
+        else:
+            st.warning(f"Lesson video not found: {local}")
     else:
-        st.caption(
-            "No video attached to this lesson. To add one, drop an mp4 into "
-            "`features/training/content/media/` and set `video_url` on the lesson "
-            "in `lessons.yaml` — a filename for a local file, or a full URL."
+        _html(
+            '<div class="video-ph">'
+            '<div class="video-ph__play">&#9658;</div>'
+            f'<div class="video-ph__label">Tutorial video {number}</div>'
+            f'<div class="video-ph__sub">{_esc(lesson.title)} &middot; '
+            f'{lesson.duration_min} min</div>'
+            '<div class="video-ph__note">Placeholder &mdash; drop an mp4 into '
+            'features/training/content/media/ and set video_url in lessons.yaml</div>'
+            "</div>"
         )
 
     st.write(lesson.summary)
