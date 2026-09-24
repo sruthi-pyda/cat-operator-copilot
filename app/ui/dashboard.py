@@ -612,12 +612,20 @@ def render_live_operation(data: DashboardData, session_id: str, context, events:
             f"{step.worker_distance_m:.1f} m" if step.worker_distance_m is not None else "—",
         )
 
-        if step.safety_events:
-            for event in step.safety_events:
-                st.error(
-                    f"{event.get('severity')} — {event.get('trigger_reason')} "
-                    f"(action: {event.get('required_action')})"
-                )
+        # Match the loudness to the severity. Showing an INFO event in critical
+        # red -- "worker outside envelope, machine stationary, none_required" --
+        # says the opposite of what the Safety Guardian decided, and undercuts
+        # the whole point that proximity alone is not danger.
+        for event in step.safety_events:
+            severity = str(event.get("severity", "")).upper()
+            line = (f"{severity} — {event.get('trigger_reason')} "
+                    f"(action: {event.get('required_action')})")
+            if severity == "CRITICAL":
+                st.error(line)
+            elif severity in ("HIGH", "MEDIUM"):
+                st.warning(line)
+            else:
+                st.caption(line)
         if not step.buddy_available:
             st.caption("Buddy blocked here: " + ", ".join(step.safe_state.reasons))
 
@@ -886,8 +894,10 @@ def render_lesson(content) -> None:
             st.success(f"Passed — {result.correct}/{result.total} "
                        f"({result.score:.0%}), pass mark {result.pass_score:.0%}.")
         else:
-            st.error(f"Not passed — {result.correct}/{result.total} "
-                     f"({result.score:.0%}), pass mark {result.pass_score:.0%}.")
+            # Warning, not error: a missed quiz is a result to act on, not a
+            # critical condition. Red is reserved for safety.
+            st.warning(f"Not passed — {result.correct}/{result.total} "
+                       f"({result.score:.0%}), pass mark {result.pass_score:.0%}.")
         st.caption(
             "Passing the quiz does not close the issue. Only a follow-up measurement "
             "that meets the improvement target does."
