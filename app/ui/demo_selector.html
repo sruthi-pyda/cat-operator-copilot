@@ -1,0 +1,72 @@
+<!--
+  Demo selector card — rendered into the dashboard sidebar.
+
+  Streamlit cannot style this shape natively, so the markup lives here and
+  features/dashboard/demo_selector.py fills the placeholders. It inherits the
+  Command Deck tokens (:root in dashboard.py), so it must not hard-code colours:
+  a hex value here would drift the moment the palette changes.
+
+  Placeholders: {category} {title} {session_id} {operator_id} {show} {say}
+-->
+<div class="demo-card">
+  <div class="demo-card__tag">{category}</div>
+  <div class="demo-card__title">{title}</div>
+  <div class="demo-card__ids">
+    <span class="mono">{operator_id}</span>
+    <span class="demo-card__sep">/</span>
+    <span class="mono">{session_id}</span>
+  </div>
+  <div class="demo-card__row">
+    <span class="demo-card__lbl">show</span>
+    <span class="demo-card__val">{show}</span>
+  </div>
+  <div class="demo-card__row">
+    <span class="demo-card__lbl">say</span>
+    <span class="demo-card__val demo-card__say">{say}</span>
+  </div>
+</div>
+
+<style>
+.demo-card {
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  padding: .6rem .7rem;
+  margin-top: .4rem;
+}
+.demo-card__tag {
+  font-size: .64rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: .2rem;
+}
+.demo-card__title {
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.25;
+  margin-bottom: .35rem;
+}
+.demo-card__ids {
+  font-size: .78rem;
+  color: var(--text-muted);
+  margin-bottom: .45rem;
+}
+.demo-card__sep { color: var(--border); margin: 0 .25rem; }
+.demo-card__row { display: flex; gap: .5rem; margin-top: .25rem; }
+.demo-card__lbl {
+  font-size: .64rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  min-width: 2.2rem;
+  padding-top: .12rem;
+}
+.demo-card__val {
+  font-size: .78rem;
+  color: var(--text);
+  line-height: 1.35;
+}
+.demo-card__say { color: var(--text-muted); font-style: italic; }
+</style>

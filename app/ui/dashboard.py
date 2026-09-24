@@ -35,6 +35,7 @@ from features.dashboard.attention_candidates import (  # noqa: E402
 )
 from features.dashboard.comparison import compare_prediction_to_outcome  # noqa: E402
 from features.dashboard.data import DashboardData, MissingDatasetError  # noqa: E402
+from features.dashboard.demo_selector import scenario_for_label, scenario_labels  # noqa: E402
 from features.dashboard.replan import describe_context_change, replan_reason  # noqa: E402
 from features.dashboard.replay import TelemetryReplay  # noqa: E402
 from features.passport.authorization import check_authorization  # noqa: E402
@@ -181,6 +182,26 @@ _SEVERITY_COLOR = {
     "CRITICAL": "var(--critical)", "HIGH": "var(--warn)", "MEDIUM": "var(--warn)",
     "LOW": "var(--text-muted)", "INFO": "var(--text-muted)",
 }
+
+
+SCENARIO_CARD_TEMPLATE = Path(__file__).with_name("demo_selector.html")
+
+
+def render_scenario_card(scenario) -> str:
+    """Fill the sidebar scenario card. The markup lives in demo_selector.html so
+    the styling stays out of Python; it inherits the :root tokens.
+
+    Placeholders are replaced rather than str.format()ed -- the template carries
+    a <style> block, and every CSS brace would otherwise be read as a field.
+    """
+    markup = SCENARIO_CARD_TEMPLATE.read_text(encoding="utf-8")
+    for field_name, value in (
+        ("category", scenario.category), ("title", scenario.title),
+        ("session_id", scenario.session_id), ("operator_id", scenario.operator_id),
+        ("show", scenario.show), ("say", scenario.say),
+    ):
+        markup = markup.replace("{" + field_name + "}", _esc(value))
+    return markup
 
 
 def _inject_css() -> None:
@@ -1081,10 +1102,30 @@ def main() -> None:
     sessions = load_table(synthetic_dir, "task_sessions.csv")
 
     with st.sidebar:
+        st.header("Demo scenarios")
+        scenario = None
+        labels = scenario_labels()
+        choice = st.selectbox(
+            "Jump to a scenario", ["— browse sessions manually —"] + labels, index=1,
+            help="Twenty curated sessions, each showing one thing. Verified by "
+                 "tests/demo_scenarios.py.",
+        )
+        if choice in labels:
+            scenario = scenario_for_label(choice)
+            _html(render_scenario_card(scenario))
+
+        st.divider()
         st.header("Session")
-        operator_id = st.selectbox("Operator", sorted(sessions.operator_id.unique()))
+        operators = sorted(sessions.operator_id.unique())
+        operator_default = operators.index(scenario.operator_id) if scenario else 0
+        operator_id = st.selectbox("Operator", operators, index=operator_default)
         operator_sessions = sessions[sessions.operator_id == operator_id]
-        session_id = st.selectbox("Session", operator_sessions.session_id.tolist())
+        session_ids = operator_sessions.session_id.tolist()
+        session_default = (
+            session_ids.index(scenario.session_id)
+            if scenario and scenario.session_id in session_ids else 0
+        )
+        session_id = st.selectbox("Session", session_ids, index=session_default)
         st.caption(f"{len(operator_sessions)} sessions for {operator_id}")
 
     context = data.build_session_context(session_id)
