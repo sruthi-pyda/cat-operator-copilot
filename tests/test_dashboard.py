@@ -161,12 +161,19 @@ def test_adapter_uses_a_feature_once_it_exists(monkeypatch):
 
 
 def test_a_real_error_inside_a_feature_is_not_disguised_as_missing(monkeypatch):
-    """Only ImportError/AttributeError mean 'not integrated'."""
+    """Only ImportError/AttributeError mean 'not integrated'.
+
+    Every candidate module is stubbed, otherwise resolution falls through to the
+    real feature and this stops testing what it claims to.
+    """
     def broken(_ctx):
         raise ValueError("model failed to load")
 
-    module = types.SimpleNamespace(predict_task=broken)
-    monkeypatch.setitem(sys.modules, "features.prediction", module)
+    monkeypatch.setitem(
+        sys.modules, "features.prediction",
+        types.SimpleNamespace(predict_combined=broken, predict_task=broken),
+    )
+    monkeypatch.setitem(sys.modules, "features.prediction.api", types.SimpleNamespace())
     with pytest.raises(ValueError, match="model failed to load"):
         get_prediction(session_context=None)
 

@@ -81,6 +81,15 @@ class TelemetryReplay:
     session_id: str
     _telemetry: Optional[pd.DataFrame] = field(default=None, repr=False)
     _events: Optional[pd.DataFrame] = field(default=None, repr=False)
+    _context: Any = field(default=None, repr=False)
+
+    def session_context(self) -> Any:
+        """Built once and reused. Safety needs a real context, not a placeholder:
+        passing None was harmless while the feature was unintegrated and became a
+        crash the moment it was wired up."""
+        if self._context is None:
+            self._context = self.data.build_session_context(self.session_id)
+        return self._context
 
     def telemetry(self) -> pd.DataFrame:
         if self._telemetry is None:
@@ -107,6 +116,9 @@ class TelemetryReplay:
         if limit is not None:
             rows = rows.head(limit)
         timestamps = rows.timestamp.tolist()
+        # One evaluation per replay, not per row: the session context does not
+        # change between telemetry rows, and Safety is not cheap to call.
+        safety = adapters.get_safety(self.session_context()) if len(rows) else None
 
         for index, row in enumerate(rows.itertuples(index=False)):
             snapshot = MachineStateSnapshot(
@@ -125,7 +137,7 @@ class TelemetryReplay:
                 worker_distance_m=_optional_float(getattr(row, "worker_distance_m", None)),
                 closing_speed_mps=_optional_float(getattr(row, "closing_speed_mps", None)),
                 safety_events=self._events_between(str(row.timestamp), next_timestamp),
-                safety_evaluation=adapters.get_safety(None),
+                safety_evaluation=safety,
             )
 
     def run(self, limit: Optional[int] = None, delay_sec: float = 0.0) -> list[ReplayStep]:

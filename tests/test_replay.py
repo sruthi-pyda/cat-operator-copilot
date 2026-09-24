@@ -86,12 +86,22 @@ def test_a_session_with_no_telemetry_yields_nothing():
     assert list(empty.steps()) == []
 
 
-def test_unintegrated_safety_is_reported_not_silently_skipped(replay):
-    """The replay must not imply a decision no feature actually made."""
+def test_safety_is_always_reported_never_silently_skipped(replay):
+    """The replay must never imply a decision no feature actually made.
+
+    Integration-agnostic on purpose: before Safety lands the step carries an
+    unavailable result naming its owner; after, it carries the real evaluation.
+    What must never happen is a step with no safety information at all.
+    """
     step = next(iter(replay.steps()))
-    assert step.safety_evaluation is not None
-    assert step.safety_evaluation.available is False
-    assert step.safety_evaluation.owner == "Member 2"
+    evaluation = step.safety_evaluation
+    assert evaluation is not None
+    assert evaluation.owner == "Member 2"
+    if evaluation.available:
+        assert evaluation.value is not None
+    else:
+        assert evaluation.value is None
+        assert "not_integrated_yet" in evaluation.reason
 
 
 # --- presentation ------------------------------------------------------------

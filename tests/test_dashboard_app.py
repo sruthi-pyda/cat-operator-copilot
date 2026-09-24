@@ -45,7 +45,13 @@ def test_the_synthetic_disclaimer_is_always_visible(app):
 
 @dataset_required
 def test_unintegrated_features_are_declared_not_faked(app):
-    """Missing features must say so; no placeholder number may appear."""
+    """Every feature that is absent must say so. Passes trivially once they are
+    all integrated, which is the point -- it must not fail for succeeding."""
+    from features.dashboard.adapters import integration_status
+
+    missing = [f for f, r in integration_status().items() if not r.available]
+    if not missing:
+        pytest.skip("every feature is integrated; nothing should be declared missing")
     notices = " ".join(element.value for element in app.info)
     assert "Not integrated yet" in notices
 
@@ -82,8 +88,11 @@ def test_the_replan_banner_names_what_changed(app):
         [e.value for e in app.warning] + [e.value for e in app.caption]
         + [e.value for e in app.markdown]
     )
-    assert "Conditions changed since the previous session" in text
-    assert "No plan has been recalculated" in text
+    # "Plan changed" once Optimization is integrated, "Conditions changed"
+    # before that. Either way a reason must be named -- a new order with no
+    # explanation is the thing this guards against.
+    assert ("Plan changed" in text) or ("Conditions changed since the previous session" in text)
+    assert "Reason:" in text
 
 
 @dataset_required
