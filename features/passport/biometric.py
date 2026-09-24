@@ -27,6 +27,7 @@ from typing import Any, Iterable, Optional, Protocol, Sequence
 from shared.config import load_settings, resolve_path
 
 EMBEDDING_FILENAME = "embeddings.json"
+SESSION_FILENAME = "active_login.json"
 
 
 class NoFaceDetectedError(ValueError):
@@ -119,6 +120,36 @@ class IdentificationResult:
         }
 
 
+@dataclass(frozen=True)
+class AuthenticatedSession:
+    """A successful face login, recorded so other surfaces can read it.
+
+    Written by the login CLI and read by the dashboard. It is a hand-off between
+    two processes, not a security token -- the file lives beside the embeddings
+    in the gitignored registration directory and never leaves the machine.
+    """
+
+    operator_id: str
+    confidence: float
+    threshold: float
+    authenticated_at: str
+
+    def age_minutes(self, as_of: Optional[datetime] = None) -> Optional[float]:
+        try:
+            recorded = datetime.fromisoformat(self.authenticated_at)
+        except (TypeError, ValueError):
+            return None
+        return ((as_of or datetime.now()) - recorded).total_seconds() / 60.0
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "operator_id": self.operator_id,
+            "confidence": round(self.confidence, 4),
+            "threshold": self.threshold,
+            "authenticated_at": self.authenticated_at,
+        }
+
+
 class EmbeddingStore:
     """Per-operator embeddings on local disk, one folder each."""
 
@@ -165,6 +196,47 @@ class EmbeddingStore:
 
     def registered_operator_ids(self) -> list[str]:
         return sorted(self.load_all())
+
+    # --- active login hand-off ------------------------------------------------
+
+    def session_path(self) -> Path:
+        return self.root / SESSION_FILENAME
+
+    def record_login(self, result: "IdentificationResult") -> Optional[Path]:
+        """Persist a successful login. A refusal clears any previous one, so a
+        failed scan cannot leave the last person signed in."""
+        path = self.session_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if not result.authenticated or not result.operator_id:
+            path.unlink(missing_ok=True)
+            return None
+        session = AuthenticatedSession(
+            operator_id=result.operator_id,
+            confidence=result.confidence,
+            threshold=result.threshold,
+            authenticated_at=datetime.now().isoformat(timespec="seconds"),
+        )
+        path.write_text(json.dumps(session.to_dict(), indent=2), encoding="utf-8")
+        return path
+
+    def active_login(self) -> Optional[AuthenticatedSession]:
+        path = self.session_path()
+        if not path.exists():
+            return None
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return AuthenticatedSession(
+                operator_id=data["operator_id"],
+                confidence=float(data.get("confidence", 0.0)),
+                threshold=float(data.get("threshold", 0.0)),
+                authenticated_at=str(data.get("authenticated_at", "")),
+            )
+        except (ValueError, KeyError):
+            # A corrupt hand-off file should not take down the dashboard.
+            return None
+
+    def clear_login(self) -> None:
+        self.session_path().unlink(missing_ok=True)
 
 
 def register_operator(

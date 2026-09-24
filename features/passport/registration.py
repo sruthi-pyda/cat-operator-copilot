@@ -180,9 +180,14 @@ def run_login(
         return 1
 
     print(f"\n{result.to_dict()}")
+    # Recorded either way: a refusal clears any previous login so a failed scan
+    # cannot leave the last operator signed in on the dashboard.
+    store.record_login(result)
+
     if result.authenticated:
         print(f"\nAuthenticated as {result.operator_id} (confidence {result.confidence:.4f}).")
         print("Authorization for a specific machine is checked separately by the Passport.")
+        print(f"Session recorded at {store.session_path()} — the dashboard will pick it up.")
         return 0
 
     print(

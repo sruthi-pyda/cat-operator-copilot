@@ -43,6 +43,7 @@ from features.dashboard.demo_selector import (  # noqa: E402
 from features.dashboard.replan import describe_context_change, replan_reason  # noqa: E402
 from features.dashboard.replay import TelemetryReplay  # noqa: E402
 from features.passport.authorization import check_authorization  # noqa: E402
+from features.passport.biometric import EmbeddingStore  # noqa: E402
 from features.training.lessons import load_content  # noqa: E402
 from features.training.peer import find_similar, load_peer_examples  # noqa: E402
 from features.training.progress import compare_metrics, next_escalation_state, score_quiz  # noqa: E402
@@ -276,7 +277,7 @@ def _worst_severity(events: pd.DataFrame) -> str:
     return next((s for s in ("CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO") if s in present), "NONE")
 
 
-def render_header(context, operator, machine, events: pd.DataFrame) -> None:
+def render_header(context, operator, machine, events: pd.DataFrame, login=None) -> None:
     authorization = check_authorization(operator, machine) if operator and machine else None
     worst = _worst_severity(events)
 
@@ -286,6 +287,16 @@ def render_header(context, operator, machine, events: pd.DataFrame) -> None:
         auth_badge = '<span class="badge ok">AUTHORIZED &#10003;</span>'
     else:
         auth_badge = '<span class="badge critical">REFUSED</span>'
+
+    if login is None:
+        face_badge = '<span class="badge muted">NO FACE LOGIN</span>'
+    elif login.operator_id == context.operator_id:
+        face_badge = f'<span class="badge ok">FACE &#10003; {login.confidence:.2f}</span>'
+    else:
+        # Viewing someone other than whoever scanned in. Say so rather than
+        # letting the screen imply the login produced this session.
+        face_badge = (f'<span class="badge warn">SIGNED IN AS '
+                      f'{_esc(login.operator_id)}</span>')
 
     severity_class = {"CRITICAL": "critical", "HIGH": "warn", "MEDIUM": "warn"}.get(worst, "muted")
     field = '<div><span class="lbl">{}</span><span class="val">{}</span></div>'
@@ -304,10 +315,17 @@ def render_header(context, operator, machine, events: pd.DataFrame) -> None:
         )
         + field.format("session", _esc(context.session_id))
         + '<span class="spacer"></span>'
+        + face_badge
         + auth_badge
         + f'<span class="badge {severity_class}">SAFETY {_esc(worst)}</span>'
         "</div>"
     )
+
+    if login is not None and login.operator_id != context.operator_id:
+        st.caption(
+            f"Signed in as {login.operator_id}, viewing {context.operator_id}'s session. "
+            "The face login did not open this one."
+        )
 
     if authorization is not None and not authorization.authorized:
         st.error(
@@ -1205,7 +1223,30 @@ def main() -> None:
     synthetic_dir = str(data.synthetic_dir)
     sessions = load_table(synthetic_dir, "task_sessions.csv")
 
+    # Read once per rerun, not cached: a login that happens while the dashboard
+    # is open should appear on the next interaction.
+    login = EmbeddingStore.from_settings(settings).active_login()
+
     with st.sidebar:
+        st.header("Signed in")
+        if login is None:
+            st.caption(
+                "No face login recorded. Using manual selection.\n\n"
+                "Run `python -m features.passport.registration login` to sign in."
+            )
+        else:
+            age = login.age_minutes()
+            when = f"{age:.0f} min ago" if age is not None and age >= 1 else "just now"
+            _html(
+                '<div class="deck-bar" style="margin:0 0 .4rem 0;padding:.55rem .7rem">'
+                '<div><span class="lbl">operator</span>'
+                f'<span class="val">{_esc(login.operator_id)}</span></div>'
+                '<span class="spacer"></span>'
+                f'<span class="badge ok">FACE &#10003; {login.confidence:.2f}</span></div>'
+            )
+            st.caption(f"Authenticated {when}, threshold {login.threshold:.2f}.")
+
+        st.divider()
         st.header("Demo scenarios")
         scenario = None
         labels = scenario_labels()
@@ -1222,7 +1263,14 @@ def main() -> None:
         st.divider()
         st.header("Session")
         operators = sorted(sessions.operator_id.unique())
-        operator_default = operators.index(scenario.operator_id) if scenario else 0
+        # A chosen scenario is explicit and wins. Otherwise fall back to whoever
+        # signed in, so browsing manually starts from the authenticated operator.
+        if scenario:
+            operator_default = operators.index(scenario.operator_id)
+        elif login and login.operator_id in operators:
+            operator_default = operators.index(login.operator_id)
+        else:
+            operator_default = 0
         operator_id = st.selectbox("Operator", operators, index=operator_default)
         operator_sessions = sessions[sessions.operator_id == operator_id]
         session_ids = operator_sessions.session_id.tolist()
@@ -1246,7 +1294,7 @@ def main() -> None:
     # Priority order: safety, then what to do, then how it should go, then
     # context, then what has happened. Secondary features sit below in tabs so
     # they stay fully available without competing for attention.
-    safe_section(render_header, context, operator, machine, events, name="Shift status")
+    safe_section(render_header, context, operator, machine, events, login, name="Shift status")
     safe_section(render_safety, events, name="Safety")
 
     plan_column, next_column = st.columns([3, 2], gap="medium")

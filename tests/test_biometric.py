@@ -175,6 +175,60 @@ def test_identification_payload_matches_the_api_contract(recognizer, store):
     assert isinstance(payload["confidence"], float)
 
 
+# --- login hand-off to the dashboard -----------------------------------------
+
+def test_no_login_recorded_means_no_active_session(store):
+    assert store.active_login() is None
+
+
+def test_a_successful_login_is_recorded(recognizer, store):
+    register_operator("OP1003", ["a1"], recognizer, store)
+    result = identify("a2", recognizer, store, settings=SETTINGS)
+    store.record_login(result)
+
+    session = store.active_login()
+    assert session is not None
+    assert session.operator_id == "OP1003"
+    # Stored rounded to 4dp, which is plenty for a display value.
+    assert session.confidence == pytest.approx(result.confidence, abs=1e-4)
+    assert session.threshold == 0.70
+    assert session.age_minutes() < 1
+
+
+def test_a_refused_login_clears_any_previous_session(recognizer, store):
+    """A failed scan must not leave the last person signed in."""
+    register_operator("OP1003", ["a1"], recognizer, store)
+    store.record_login(identify("a2", recognizer, store, settings=SETTINGS))
+    assert store.active_login() is not None
+
+    store.record_login(identify("stranger", recognizer, store, settings=SETTINGS))
+    assert store.active_login() is None
+
+
+def test_a_corrupt_session_file_does_not_raise(store):
+    """The dashboard reads this on every rerun; bad JSON must not take it down."""
+    store.root.mkdir(parents=True, exist_ok=True)
+    store.session_path().write_text("{not valid json", encoding="utf-8")
+    assert store.active_login() is None
+
+
+def test_clear_login_removes_the_session(recognizer, store):
+    register_operator("OP1003", ["a1"], recognizer, store)
+    store.record_login(identify("a2", recognizer, store, settings=SETTINGS))
+    store.clear_login()
+    assert store.active_login() is None
+
+
+def test_the_session_file_holds_no_biometric_data(recognizer, store):
+    """It is a hand-off between processes, not a credential -- no embedding."""
+    import json
+
+    register_operator("OP1003", ["a1"], recognizer, store)
+    store.record_login(identify("a2", recognizer, store, settings=SETTINGS))
+    payload = json.loads(store.session_path().read_text(encoding="utf-8"))
+    assert set(payload) == {"operator_id", "confidence", "threshold", "authenticated_at"}
+
+
 def test_a_frame_with_no_face_propagates_rather_than_silently_failing(recognizer, store):
     register_operator("OP1003", ["a1"], recognizer, store)
     with pytest.raises(NoFaceDetectedError):
