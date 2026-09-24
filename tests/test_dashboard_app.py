@@ -58,13 +58,32 @@ def test_unintegrated_features_are_declared_not_faked(app):
 
 @dataset_required
 def test_every_required_dashboard_section_is_present(app):
-    headings = " ".join(element.value for element in app.subheader)
+    """Some regions are Streamlit subheaders, others are custom HTML panels, so
+    both surfaces are searched. What matters is that no region disappeared."""
+    rendered = " ".join(
+        [element.value for element in app.subheader]
+        + [element.value for element in app.markdown]
+        + [element.value for element in app.caption]
+    )
     for section in (
-        "Shift status", "Plan", "Prediction", "Conditions",
+        "CAT OPERATOR COPILOT", "Plan", "Prediction", "Conditions",
         "Live operation", "Operating Buddy", "Training Hub",
         "Replanning", "Attention queue", "End of shift",
     ):
-        assert section in headings
+        assert section in rendered, f"{section} missing from the page"
+
+
+@dataset_required
+def test_the_identity_bar_shows_operator_machine_and_authorization(app):
+    rendered = " ".join(element.value for element in app.markdown)
+    assert "operator" in rendered and "machine" in rendered
+    assert ("AUTHORIZED" in rendered) or ("REFUSED" in rendered)
+
+
+@dataset_required
+def test_safety_region_states_its_condition_in_words_not_colour_alone(app):
+    rendered = " ".join(element.value for element in app.markdown)
+    assert ("CLEAR" in rendered) or ("CRITICAL" in rendered) or ("HIGH" in rendered)
 
 
 @dataset_required

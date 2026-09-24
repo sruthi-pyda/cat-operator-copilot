@@ -12,9 +12,11 @@ prediction as though they were one.
 """
 from __future__ import annotations
 
+import html
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -57,6 +59,142 @@ def load_table(synthetic_dir: str, name: str) -> pd.DataFrame:
     return DashboardData(Path(synthetic_dir))._read(name)
 
 
+@st.cache_data(show_spinner=False)
+def task_meta(synthetic_dir: str) -> dict:
+    """task_id -> {priority, deadline}. The optimizer's steps carry neither, so
+    the Next Task card reads them from tasks.csv rather than going without."""
+    tasks = load_table(synthetic_dir, "tasks.csv")
+    return {
+        row.task_id: {
+            "priority": getattr(row, "priority", None),
+            "deadline": getattr(row, "deadline_timestamp", None),
+        }
+        for row in tasks.itertuples(index=False)
+    }
+
+
+# --- presentation layer ------------------------------------------------------
+# Streamlit cannot style these shapes natively, so a few small helpers return
+# HTML strings. Tokens live in one :root block injected once by _inject_css().
+#
+# Two colour rules, kept deliberately strict:
+#   --critical  only an active CRITICAL safety event or a hard-blocked task
+#   --accent    system/active state (the NOW marker, the brand rule) -- not borders
+
+CSS = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+:root {
+  --bg:#171A1C; --panel:#202428; --panel-raised:#262B2F; --border:#33393D;
+  --text:#EDEDE9; --text-muted:#9AA0A6;
+  --accent:#F2B544; --ok:#7FA88F; --warn:#E0942C; --critical:#D34C3F;
+}
+html, body, [class*="css"] { font-family:'Inter',system-ui,sans-serif; }
+.mono { font-family:'IBM Plex Mono',ui-monospace,monospace; }
+
+.deck-bar {
+  display:flex; align-items:center; gap:1.5rem; flex-wrap:wrap;
+  background:var(--panel); border:1px solid var(--border);
+  border-left:3px solid var(--accent);
+  padding:.7rem 1rem; margin-bottom:.4rem;
+}
+.deck-bar .brand { font-weight:600; letter-spacing:.02em; color:var(--text); }
+.deck-bar .sep { color:var(--border); }
+.deck-bar .lbl { color:var(--text-muted); font-size:.72rem; display:block; }
+.deck-bar .val { font-family:'IBM Plex Mono',monospace; color:var(--text); font-size:.95rem; }
+.deck-bar .spacer { flex:1; }
+
+.badge {
+  font-size:.74rem; padding:.2rem .55rem; border:1px solid var(--border);
+  border-radius:2px; font-family:'IBM Plex Mono',monospace; white-space:nowrap;
+}
+.badge.ok       { color:var(--ok);       border-color:var(--ok); }
+.badge.warn     { color:var(--warn);     border-color:var(--warn); }
+.badge.critical { color:var(--critical); border-color:var(--critical); }
+.badge.muted    { color:var(--text-muted); }
+
+.panel {
+  background:var(--panel); border:1px solid var(--border);
+  padding:.85rem 1rem; margin-bottom:.5rem;
+}
+.panel.raised { background:var(--panel-raised); }
+.panel h4 { margin:0 0 .5rem 0; font-size:.8rem; font-weight:600; color:var(--text-muted); }
+
+.safety-clear {
+  border-left:3px solid var(--ok); color:var(--ok);
+  font-size:.92rem; padding:.6rem 1rem; background:var(--panel);
+  border-top:1px solid var(--border); border-right:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+.safety-alert { border-left:3px solid var(--critical); background:var(--panel); padding:.8rem 1rem;
+  border-top:1px solid var(--border); border-right:1px solid var(--border);
+  border-bottom:1px solid var(--border); }
+.safety-alert.high { border-left-color:var(--warn); }
+.safety-alert .head { font-weight:600; letter-spacing:.04em; margin-bottom:.35rem; }
+.safety-alert.critical .head { color:var(--critical); }
+.safety-alert.high .head { color:var(--warn); }
+.safety-alert .facts { display:flex; gap:1.6rem; flex-wrap:wrap; margin-top:.5rem; }
+.safety-alert .facts .lbl { color:var(--text-muted); font-size:.7rem; display:block; }
+.safety-alert .facts .val { font-family:'IBM Plex Mono',monospace; color:var(--text); }
+
+.steps { list-style:none; margin:0; padding:0; }
+.steps li {
+  display:flex; align-items:baseline; gap:.75rem;
+  padding:.45rem 0; border-bottom:1px solid var(--border);
+}
+.steps li:last-child { border-bottom:none; }
+.steps .idx { font-family:'IBM Plex Mono',monospace; color:var(--text-muted); width:1.4rem; }
+.steps .tid { font-family:'IBM Plex Mono',monospace; color:var(--text); }
+.steps .when { font-family:'IBM Plex Mono',monospace; color:var(--text-muted); font-size:.85rem; }
+.steps .now { color:var(--accent); font-size:.68rem; letter-spacing:.09em;
+  border:1px solid var(--accent); padding:.05rem .35rem; }
+.steps .late { color:var(--warn); font-size:.7rem; }
+.steps .grow { flex:1; }
+
+.rb { margin-bottom:.9rem; }
+.rb .top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:.3rem; }
+.rb .name { color:var(--text-muted); font-size:.78rem; }
+.rb .p50 { font-family:'IBM Plex Mono',monospace; font-size:1.25rem; color:var(--text); }
+.rb .track { position:relative; height:6px; background:var(--panel-raised);
+  border:1px solid var(--border); }
+.rb .fill { position:absolute; top:0; bottom:0; background:rgba(242,181,68,.22); }
+.rb .mark { position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--accent); }
+.rb .ends { display:flex; justify-content:space-between; margin-top:.25rem;
+  font-family:'IBM Plex Mono',monospace; font-size:.72rem; color:var(--text-muted); }
+
+.cond { display:flex; gap:1.8rem; flex-wrap:wrap; }
+.cond .item .lbl { color:var(--text-muted); font-size:.7rem; display:block; }
+.cond .item .val { font-family:'IBM Plex Mono',monospace; color:var(--text); font-size:.9rem; }
+
+.log { list-style:none; margin:0; padding:0; }
+.log li { display:flex; gap:.7rem; align-items:baseline; padding:.3rem 0;
+  border-bottom:1px solid var(--border); font-size:.86rem; }
+.log li:last-child { border-bottom:none; }
+.log .t { font-family:'IBM Plex Mono',monospace; color:var(--text-muted); }
+.log .dot { width:7px; height:7px; border-radius:50%; display:inline-block; }
+.log .reason { color:var(--text); }
+</style>
+"""
+
+_SEVERITY_CLASS = {"CRITICAL": "critical", "HIGH": "warn", "MEDIUM": "warn"}
+_SEVERITY_COLOR = {
+    "CRITICAL": "var(--critical)", "HIGH": "var(--warn)", "MEDIUM": "var(--warn)",
+    "LOW": "var(--text-muted)", "INFO": "var(--text-muted)",
+}
+
+
+def _inject_css() -> None:
+    st.markdown(CSS, unsafe_allow_html=True)
+
+
+def _html(markup: str) -> None:
+    st.markdown(markup, unsafe_allow_html=True)
+
+
+def _esc(value: Any) -> str:
+    return html.escape("" if value is None else str(value))
+
+
 def safe_section(render, *args, name: str) -> None:
     """Render one section; a failure inside it must not blank the shift screen.
 
@@ -88,26 +226,96 @@ def render_integration_strip() -> None:
     )
 
 
+def _worst_severity(events: pd.DataFrame) -> str:
+    if events.empty:
+        return "NONE"
+    present = set(events.severity)
+    return next((s for s in ("CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO") if s in present), "NONE")
+
+
 def render_header(context, operator, machine, events: pd.DataFrame) -> None:
-    st.subheader("Shift status")
     authorization = check_authorization(operator, machine) if operator and machine else None
+    worst = _worst_severity(events)
 
-    columns = st.columns(5)
-    columns[0].metric("Operator", context.operator_id)
-    columns[1].metric("Machine", f"{context.machine_id}", context.machine.machine_type or None)
-    if authorization is not None:
-        columns[2].metric("Authorization", "Authorized" if authorization.authorized else "Refused")
-    columns[3].metric("Task", context.task_id or "—", context.task.task_type or None)
+    if authorization is None:
+        auth_badge = '<span class="badge muted">AUTHORIZATION UNKNOWN</span>'
+    elif authorization.authorized:
+        auth_badge = '<span class="badge ok">AUTHORIZED &#10003;</span>'
+    else:
+        auth_badge = '<span class="badge critical">REFUSED</span>'
 
-    severities = events.severity.value_counts().to_dict() if not events.empty else {}
-    worst = next((s for s in ("CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO") if s in severities), "None")
-    columns[4].metric("Worst recorded safety event", worst, f"{len(events)} in session")
+    severity_class = {"CRITICAL": "critical", "HIGH": "warn", "MEDIUM": "warn"}.get(worst, "muted")
+    field = '<div><span class="lbl">{}</span><span class="val">{}</span></div>'
+
+    _html(
+        '<div class="deck-bar">'
+        '<span class="brand">CAT OPERATOR COPILOT</span>'
+        '<span class="sep">|</span>'
+        + field.format("operator", _esc(context.operator_id))
+        + field.format(
+            "machine",
+            f"{_esc(context.machine_id)} &middot; {_esc(context.machine.machine_type or '')}",
+        )
+        + field.format(
+            "task", f"{_esc(context.task_id or '—')} &middot; {_esc(context.task.task_type or '')}"
+        )
+        + field.format("session", _esc(context.session_id))
+        + '<span class="spacer"></span>'
+        + auth_badge
+        + f'<span class="badge {severity_class}">SAFETY {_esc(worst)}</span>'
+        "</div>"
+    )
 
     if authorization is not None and not authorization.authorized:
         st.error(
             "Authorization refused: " + ", ".join(authorization.reasons)
             + ". No session may be opened for this operator on this machine."
         )
+
+
+def render_safety(events: pd.DataFrame) -> None:
+    """Quiet by default; loud only when something is actually wrong.
+
+    Reads the same safety_events frame the live-operation section uses -- this
+    surfaces it earlier and larger, it does not re-decide anything. Severity and
+    required_action come from the Safety Guardian's own columns.
+    """
+    urgent = events[events.severity.isin(["CRITICAL", "HIGH"])] if not events.empty else events
+
+    if urgent.empty:
+        count = len(events)
+        tail = f" &middot; {count} lower-severity event(s) logged" if count else ""
+        _html(f'<div class="safety-clear">CLEAR &mdash; no critical or high safety event'
+              f' in this session{tail}</div>')
+        return
+
+    for event in urgent.to_dict(orient="records"):
+        severity = str(event.get("severity", "")).upper()
+        tone = "critical" if severity == "CRITICAL" else "high"
+        facts = [
+            ("worker distance", f"{event.get('worker_distance_m', '—')} m"),
+            ("closing speed", f"{event.get('closing_speed_mps', '—')} m/s"),
+            ("machine state", event.get("machine_state", "—")),
+            ("required action", event.get("required_action", "—")),
+            ("recorded", str(event.get("timestamp", ""))[11:19]),
+        ]
+        body = "".join(
+            f'<div><span class="lbl">{_esc(label)}</span>'
+            f'<span class="val">{_esc(value)}</span></div>'
+            for label, value in facts
+        )
+        _html(
+            f'<div class="safety-alert {tone}">'
+            f'<div class="head">{_esc(severity)} &mdash; {_esc(event.get("event_type", "safety event"))}</div>'
+            f'<div>{_esc(event.get("trigger_reason", ""))}</div>'
+            f'<div class="facts">{body}</div>'
+            "</div>"
+        )
+
+    st.caption(
+        "Recorded by the Safety Guardian, which is deterministic and rule-based. "
+        "Distance alone never decides severity — motion, swing path and closing speed do."
+    )
 
 
 def _clock(value: Any) -> str:
@@ -128,44 +336,72 @@ def render_plan(context) -> None:
 
     plan = result.value
     steps = plan.get("steps") or []
+    meta = task_meta(str(DashboardData.from_settings().synthetic_dir))
 
     if not steps:
-        st.info("No feasible task for this operator and machine in this shift.")
+        st.info(
+            "No feasible task for this operator and machine in this shift. "
+            "Check the exclusions below — the fatigue budget and CRITICAL safety "
+            "findings are hard blocks, not costs."
+        )
     else:
+        items = []
+        for index, step in enumerate(steps, start=1):
+            now = '<span class="now">NOW</span>' if index == 1 else ""
+            late = "" if step.get("deadline_met", True) else '<span class="late">past deadline</span>'
+            at_risk = (
+                '<span class="late">deadline at risk</span>'
+                if step.get("deadline_at_risk") and step.get("deadline_met", True) else ""
+            )
+            items.append(
+                f'<li><span class="idx">{index}</span>'
+                f'<span class="tid">{_esc(step.get("task_id"))}</span>'
+                f'{now}<span class="grow"></span>{late}{at_risk}'
+                f'<span class="when">{_clock(step.get("start"))}&ndash;{_clock(step.get("end_p50"))}</span>'
+                f'<span class="when">{step.get("eta_min", {}).get("p50", 0):.0f} min</span></li>'
+            )
+        _html(f'<div class="panel"><h4>Ordered sequence</h4><ul class="steps">{"".join(items)}</ul></div>')
+
         first = steps[0]
         eta, fuel = first.get("eta_min", {}), first.get("fuel_l", {})
-        st.markdown(f"**Next task — {first.get('task_id')}**")
-        columns = st.columns(4)
-        columns[0].metric("Starts", _clock(first.get("start")))
-        columns[1].metric(
-            "ETA P50", f"{eta.get('p50', 0):.0f} min",
-            f"P10-P90 {eta.get('p10', 0):.0f}-{eta.get('p90', 0):.0f}", delta_color="off",
+        info = meta.get(first.get("task_id"), {})
+        priority = info.get("priority")
+        deadline = str(info.get("deadline") or "")[:16].replace("T", " ")
+        rows = [
+            ("priority", f"P{priority}" if priority is not None else "—"),
+            ("deadline", deadline or "—"),
+            ("starts", _clock(first.get("start"))),
+            ("ETA P50", f"{eta.get('p50', 0):.0f} min"),
+            ("fuel P50", f"{fuel.get('p50', 0):.1f} L"),
+            ("confidence", f"{first.get('prediction_confidence', 0):.2f}"),
+        ]
+        body = "".join(
+            f'<div class="item"><span class="lbl">{_esc(k)}</span>'
+            f'<span class="val">{_esc(v)}</span></div>' for k, v in rows
         )
-        columns[2].metric("Fuel P50", f"{fuel.get('p50', 0):.1f} L")
-        columns[3].metric("Confidence", f"{first.get('prediction_confidence', 0):.2f}")
-
-        st.dataframe(
-            pd.DataFrame([
-                {
-                    "#": index,
-                    "task": step.get("task_id"),
-                    "start": _clock(step.get("start")),
-                    "ends (P50)": _clock(step.get("end_p50")),
-                    "ETA P50 (min)": round(step.get("eta_min", {}).get("p50", 0), 1),
-                    "fuel P50 (L)": round(step.get("fuel_l", {}).get("p50", 0), 1),
-                    "cost": round(sum(step.get("cost_breakdown", {}).values()), 1),
-                }
-                for index, step in enumerate(steps, start=1)
-            ]),
-            width="stretch", hide_index=True,
+        _html(
+            f'<div class="panel raised"><h4>Next task &mdash; '
+            f'<span class="mono">{_esc(first.get("task_id"))}</span></h4>'
+            f'<div class="cond">{body}</div></div>'
         )
+        if first.get("reason"):
+            st.caption(f"Chosen because: {first['reason']}")
 
     st.markdown(f"**Why this order:** {plan.get('reason', 'not stated')}")
 
-    columns = st.columns(3)
-    columns[0].metric("Total cost", f"{plan.get('total_cost', 0):.0f}")
-    columns[1].metric("Deadlines met", str(plan.get("deadlines_met", "—")))
-    columns[2].metric("Shift planned", f"{plan.get('shift_minutes_planned', 0):.0f} min")
+    totals = [
+        ("total cost", f"{plan.get('total_cost', 0):.0f}"),
+        ("deadlines met", str(plan.get("deadlines_met", "—"))),
+        ("shift planned", f"{plan.get('shift_minutes_planned', 0):.0f} min"),
+    ]
+    _html(
+        '<div class="panel"><div class="cond">'
+        + "".join(
+            f'<div class="item"><span class="lbl">{_esc(k)}</span>'
+            f'<span class="val">{_esc(v)}</span></div>' for k, v in totals
+        )
+        + "</div></div>"
+    )
 
     breakdown = plan.get("cost_breakdown") or {}
     if breakdown:
@@ -293,53 +529,66 @@ def render_prediction(context) -> None:
         return
 
     prediction = result.value
-    columns = st.columns(4)
-    columns[0].metric("ETA P50 (min)", f"{prediction.eta_p50:.1f}" if prediction.eta_p50 else "—")
-    columns[1].metric(
-        "ETA range",
-        f"{prediction.eta_p10:.0f} – {prediction.eta_p90:.0f}" if prediction.eta_p50 else "—",
+    bars = _range_bar("Estimated duration", prediction.eta_p10, prediction.eta_p50,
+                      prediction.eta_p90, "min")
+    # A zeroed percentile means this call predicted nothing for that quantity;
+    # rendering 0.0 would read as a prediction of zero.
+    bars += _range_bar("Fuel", prediction.fuel_p10, prediction.fuel_p50,
+                       prediction.fuel_p90, "L")
+    _html(
+        f'<div class="panel">{bars}'
+        f'<div class="cond"><div class="item"><span class="lbl">confidence</span>'
+        f'<span class="val">{prediction.confidence:.2f}</span></div></div></div>'
     )
-    # A zeroed fuel field means this call predicted ETA only; a 0.0 on screen
-    # would read as a prediction of no fuel use.
-    columns[2].metric(
-        "Fuel P50 (L)", f"{prediction.fuel_p50:.1f}" if prediction.fuel_p50 else "not predicted"
-    )
-    columns[3].metric("Confidence", f"{prediction.confidence:.2f}")
     if prediction.factors:
         st.caption("Contributing factors: " + ", ".join(prediction.factors)
                    + " — contribution to the prediction, not causes.")
 
 
+def _range_bar(label: str, p10, p50, p90, unit: str) -> str:
+    """The page's one instrument: a P10-P90 track with the P50 marked.
+
+    A zeroed P50 means this quantity was not predicted, which is shown as such
+    rather than as a bar sitting at zero.
+    """
+    if not p50:
+        return (f'<div class="rb"><div class="top"><span class="name">{_esc(label)}</span>'
+                f'<span class="p50">not predicted</span></div></div>')
+
+    low, high = float(p10 or 0), float(p90 or 0)
+    span = max(high - low, 1e-9)
+    marker = min(max((float(p50) - low) / span, 0.0), 1.0) * 100
+    return (
+        f'<div class="rb">'
+        f'<div class="top"><span class="name">{_esc(label)}</span>'
+        f'<span class="p50">{float(p50):.1f} <span class="name">{_esc(unit)}</span></span></div>'
+        f'<div class="track"><div class="fill" style="left:0;right:0"></div>'
+        f'<div class="mark" style="left:{marker:.1f}%"></div></div>'
+        f'<div class="ends"><span>P10 {low:.1f}</span>'
+        f'<span>P50 {float(p50):.1f}</span><span>P90 {high:.1f}</span></div></div>'
+    )
+
+
 def render_conditions(context) -> None:
-    st.subheader("Conditions")
-    columns = st.columns(4)
-    with columns[0]:
-        st.markdown("**Weather**")
-        st.write({
-            "rain_mm": context.weather.rain_mm,
-            "temperature_c": context.weather.temperature_c,
-            "visibility_m": context.weather.visibility_m,
-            "dust_level": context.weather.dust_level,
-            "day_night": context.weather.day_night,
-        })
-    with columns[1]:
-        st.markdown("**Site**")
-        st.write({
-            "soil_material": context.site.soil_material,
-            "soil_hardness_index": context.site.hardness,
-            "slope_deg": context.site.slope,
-            "surface": context.site.surface,
-        })
-    with columns[2]:
-        st.markdown("**Traffic**")
-        st.write({"congestion": context.traffic.congestion})
-    with columns[3]:
-        st.markdown("**Machine**")
-        st.write({
-            "condition": context.machine.machine_condition,
-            "engine_hours": context.machine.engine_hours,
-            "attachment": context.machine.attachment,
-        })
+    items = [
+        ("rain", f"{context.weather.rain_mm} mm"),
+        ("temp", f"{context.weather.temperature_c} C"),
+        ("visibility", f"{context.weather.visibility_m} m"),
+        ("dust", context.weather.dust_level),
+        ("light", context.weather.day_night),
+        ("soil", context.site.soil_material),
+        ("hardness", context.site.hardness),
+        ("slope", f"{context.site.slope} deg"),
+        ("surface", context.site.surface),
+        ("congestion", context.traffic.congestion),
+        ("machine", context.machine.machine_condition),
+        ("attachment", context.machine.attachment),
+    ]
+    body = "".join(
+        f'<div class="item"><span class="lbl">{_esc(k)}</span>'
+        f'<span class="val">{_esc(v)}</span></div>' for k, v in items
+    )
+    _html(f'<div class="panel"><h4>Conditions</h4><div class="cond">{body}</div></div>')
 
 
 def render_live_operation(data: DashboardData, session_id: str, context, events: pd.DataFrame) -> None:
@@ -406,16 +655,26 @@ def render_live_operation(data: DashboardData, session_id: str, context, events:
     if events.empty:
         st.caption("No safety events recorded for this session.")
     else:
-        st.markdown("**Safety events recorded in this session**")
-        st.caption(
-            "Recorded in the dataset. Live evaluation is the Safety Guardian's decision, "
-            "which is deterministic and owned by Member 2."
+        st.markdown("**Event log**")
+        entries = "".join(
+            f'<li><span class="t">{_esc(str(e.get("timestamp",""))[11:19])}</span>'
+            f'<span class="dot" style="background:'
+            f'{_SEVERITY_COLOR.get(str(e.get("severity","")).upper(), "var(--text-muted)")}"></span>'
+            f'<span class="t">{_esc(e.get("severity",""))}</span>'
+            f'<span class="reason">{_esc(e.get("trigger_reason",""))}</span></li>'
+            for e in events.sort_values("timestamp").to_dict(orient="records")
         )
-        st.dataframe(
-            events[["timestamp", "severity", "event_type", "trigger_reason",
-                    "worker_distance_m", "closing_speed_mps", "machine_state"]],
-            width="stretch", hide_index=True,
-        )
+        _html(f'<ul class="log">{entries}</ul>')
+        with st.expander("Full event records"):
+            st.dataframe(
+                events[["timestamp", "severity", "event_type", "trigger_reason",
+                        "worker_distance_m", "closing_speed_mps", "machine_state"]],
+                width="stretch", hide_index=True,
+            )
+            st.caption(
+                "Recorded in the dataset. Live evaluation is the Safety Guardian's decision, "
+                "which is deterministic and owned by Member 2."
+            )
 
 
 def render_end_of_shift(data: DashboardData, session_id: str) -> None:
@@ -793,7 +1052,7 @@ def render_training_gate(operator_id: str) -> None:
 
 
 def main() -> None:
-    st.title("CAT Operator Copilot")
+    _inject_css()
     st.caption("All data is synthetic. Nothing here is real CAT field telemetry.")
 
     settings = load_settings()
@@ -828,30 +1087,41 @@ def main() -> None:
     telemetry = load_table(synthetic_dir, "telemetry.csv")
     telemetry = telemetry[telemetry.session_id == session_id]
 
-    render_integration_strip()
+    # Priority order: safety, then what to do, then how it should go, then
+    # context, then what has happened. Secondary features sit below in tabs so
+    # they stay fully available without competing for attention.
     safe_section(render_header, context, operator, machine, events, name="Shift status")
-    st.divider()
-    safe_section(render_plan, context, name="Plan")
-    st.divider()
+    safe_section(render_safety, events, name="Safety")
+
+    plan_column, next_column = st.columns([3, 2], gap="medium")
+    with plan_column:
+        safe_section(render_plan, context, name="Plan")
+    with next_column:
+        safe_section(render_prediction, context, name="Prediction")
+
+    safe_section(render_conditions, context, name="Conditions")
+
     changes = ()
     try:
         changes = render_replan(data, sessions, session_id, context) or ()
     except Exception as exc:  # noqa: BLE001
         st.error(f"**Replanning failed to render.** {type(exc).__name__}: {exc}")
-    st.divider()
-    safe_section(render_prediction, context, name="Prediction")
-    st.divider()
-    safe_section(render_conditions, context, name="Conditions")
-    st.divider()
+
     safe_section(render_live_operation, data, session_id, context, events, name="Live operation")
-    st.divider()
-    safe_section(render_attention, events, changes, telemetry, name="Attention queue")
-    st.divider()
-    safe_section(render_buddy, context, telemetry, events, name="Operating Buddy")
-    st.divider()
-    safe_section(render_training, operator_id, context, name="Training Hub")
-    st.divider()
-    safe_section(render_end_of_shift, data, session_id, name="End of shift")
+
+    attention_tab, buddy_tab, training_tab, shift_tab = st.tabs(
+        ["Attention queue", "Operating Buddy", "Training Hub", "End of shift"]
+    )
+    with attention_tab:
+        safe_section(render_attention, events, changes, telemetry, name="Attention queue")
+    with buddy_tab:
+        safe_section(render_buddy, context, telemetry, events, name="Operating Buddy")
+    with training_tab:
+        safe_section(render_training, operator_id, context, name="Training Hub")
+    with shift_tab:
+        safe_section(render_end_of_shift, data, session_id, name="End of shift")
+
+    render_integration_strip()
 
 
 if __name__ == "__main__":
