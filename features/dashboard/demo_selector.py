@@ -255,6 +255,24 @@ SCENARIOS: tuple[DemoScenario, ...] = (
 )
 
 
+# The dashboard opens here. It must be an OP1001 scenario: OP1001 is the only
+# registered face, so opening on anyone else contradicts the login that just
+# happened. "full-plan" is also the cleanest first impression -- authorized,
+# every deadline met, nothing red.
+DEFAULT_SCENARIO_KEY = "full-plan"
+
+
+def default_scenario() -> DemoScenario:
+    return scenario_by_key(DEFAULT_SCENARIO_KEY) or SCENARIOS[0]
+
+
+def default_label_index() -> int:
+    """Index into ["— browse —"] + scenario_labels(), so the selectbox opens here."""
+    labels = scenario_labels()
+    target = f"{default_scenario().category} — {default_scenario().title}"
+    return labels.index(target) + 1 if target in labels else 0
+
+
 def all_scenarios() -> tuple[DemoScenario, ...]:
     return SCENARIOS
 

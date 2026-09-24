@@ -35,7 +35,11 @@ from features.dashboard.attention_candidates import (  # noqa: E402
 )
 from features.dashboard.comparison import compare_prediction_to_outcome  # noqa: E402
 from features.dashboard.data import DashboardData, MissingDatasetError  # noqa: E402
-from features.dashboard.demo_selector import scenario_for_label, scenario_labels  # noqa: E402
+from features.dashboard.demo_selector import (  # noqa: E402
+    default_label_index,
+    scenario_for_label,
+    scenario_labels,
+)
 from features.dashboard.replan import describe_context_change, replan_reason  # noqa: E402
 from features.dashboard.replay import TelemetryReplay  # noqa: E402
 from features.passport.authorization import check_authorization  # noqa: E402
@@ -1106,7 +1110,8 @@ def main() -> None:
         scenario = None
         labels = scenario_labels()
         choice = st.selectbox(
-            "Jump to a scenario", ["— browse sessions manually —"] + labels, index=1,
+            "Jump to a scenario", ["— browse sessions manually —"] + labels,
+            index=default_label_index(),
             help="Twenty curated sessions, each showing one thing. Verified by "
                  "tests/demo_scenarios.py.",
         )

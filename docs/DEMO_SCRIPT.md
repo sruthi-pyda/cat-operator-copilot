@@ -16,8 +16,17 @@ Every number below was verified on the integrated system. Nothing here is aspira
       `$env:PYTHONIOENCODING="utf-8"; .venv\Scripts\python.exe -m features.passport.registration register --operator-id OP1001 --frames 8 --countdown 15`
       Then test login twice. Lighting at login is what decides success, not enrolment quality.
 - [ ] Start the dashboard: `.venv\Scripts\python.exe -m streamlit run app/ui/dashboard.py --server.port 8502`
-- [ ] Set sidebar to **operator OP1001**, **session S000689**, and leave it there
+      **Start it early.** First load is ~25 seconds — it warms the models and reads 75,000
+      telemetry rows. After that, page interactions are a few seconds. Do not start it at 10:58.
+- [ ] Load the page once and click through every tab before the audience arrives, so
+      nothing is cold when it matters
 - [ ] Close other Streamlit instances (port clashes)
+
+**Use the scenario selector.** The sidebar has *Jump to a scenario* — twenty curated
+sessions, each showing one thing, each with the point to make printed on the card.
+Selecting one sets the operator and session for the whole page, so you never hunt for a
+session ID live. Every scenario's claims are asserted in `tests/demo_scenarios.py`, so if
+the data shifts a test fails rather than the demo.
 - [ ] Optional: start Ollama. Everything works without it — Buddy answers are quoted instead of conversational.
 
 **Operator IDs (changed — see D040):** Saanvi = OP1001, Sruthi = OP1002, Aneesha = OP1003.

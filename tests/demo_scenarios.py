@@ -74,6 +74,17 @@ def test_every_category_is_represented():
     assert set(covered) == set(CATEGORY_ORDER)
 
 
+def test_the_dashboard_opens_on_the_registered_operator():
+    """OP1001 is the only registered face. Opening on any other operator would
+    contradict the login the audience just watched."""
+    from features.dashboard.demo_selector import default_label_index, default_scenario
+
+    assert default_scenario().operator_id == "OP1001"
+    assert default_scenario().expect.get("authorized") is True
+    # index 0 is the manual-browse entry, so a real scenario must be past it
+    assert default_label_index() >= 1
+
+
 def test_lookup_helpers_round_trip():
     assert scenario_by_key("full-plan").session_id == "S000146"
     assert scenario_by_key("does-not-exist") is None

@@ -478,4 +478,18 @@ if result.context_share() > 0.5:
 
 ---
 
+## D041 — Demo scenarios are curated and verified, not chosen live
+
+**Decision:** `features/dashboard/demo_selector.py` names twenty sessions, each demonstrating one thing, surfaced as a sidebar selector that drives the operator and session for the whole page. `tests/demo_scenarios.py` asserts every claim each scenario makes.
+
+**Reason:** There are 5,000 sessions. Most show nothing in particular, many produce an empty plan because the operator is past the fatigue budget, and roughly two-thirds of a given operator's sessions are on machines they are not cleared for. Finding a good one live is how a demo fails.
+
+**Why the tests matter more than the list:** a scenario list nobody verifies is worse than none, because it gets trusted. If Member 1 regenerates the data and a session stops showing what it promises, a test fails instead of the demo. Cheap checks (severity, authorization, operator) always run; plan checks call the optimizer and models and are opt-in via `RUN_SLOW=1`.
+
+**Default scenario** is an OP1001 one. OP1001 is the only registered face, so opening on another operator would contradict the login the audience just watched.
+
+**Note:** `pytest.ini` names `demo_scenarios.py` explicitly. It does not match pytest's default `test_*.py` pattern and was being collected as zero tests — silently, which is the failure mode this file exists to prevent.
+
+---
+
 _Add new decisions here as they arise. Do not silently make assumptions._
