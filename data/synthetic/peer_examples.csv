@@ -1,0 +1,151 @@
+example_id,source_operator_anonymized_id,task_type,machine_type,attachment_type,site_condition,technique_description,observed_metric,context_similarity_score,approved_for_peer_learning,synthetic_flag
+PE0001,ANON_804,trenching,dozer,blade,moderate,Consistent depth control reduces rework passes,0.739,0.753,True,True
+PE0002,ANON_325,hauling,dozer,ripper,moderate,Steady speed on grade optimises fuel per tonne-km,0.716,0.998,True,True
+PE0003,ANON_342,grading,excavator,blade,moderate,Single-pass technique on firm dry soil,0.721,0.939,False,True
+PE0004,ANON_926,loading,hauler,bucket,easy,Sequential loading pattern minimises repositioning,0.678,0.71,True,True
+PE0005,ANON_688,excavation,excavator,ripper,moderate,Optimal bucket fill angle reduces cycle time by ~12%,0.781,0.912,False,True
+PE0006,ANON_583,loading,grader,grapple,moderate,Sequential loading pattern minimises repositioning,0.711,0.606,True,True
+PE0007,ANON_877,stockpiling,excavator,bucket,moderate,Layered placement reduces rehandling effort,0.811,0.841,False,True
+PE0008,ANON_842,grading,grader,hammer,easy,Single-pass technique on firm dry soil,0.688,0.944,True,True
+PE0009,ANON_185,hauling,grader,hammer,easy,Steady speed on grade optimises fuel per tonne-km,0.864,0.567,True,True
+PE0010,ANON_698,hauling,dozer,hammer,difficult,Steady speed on grade optimises fuel per tonne-km,0.894,0.982,True,True
+PE0011,ANON_396,hauling,loader,hammer,difficult,Steady speed on grade optimises fuel per tonne-km,0.73,0.696,True,True
+PE0012,ANON_785,loading,hauler,hammer,moderate,Sequential loading pattern minimises repositioning,0.743,0.569,True,True
+PE0013,ANON_633,hauling,grader,grapple,easy,Steady speed on grade optimises fuel per tonne-km,0.882,0.63,True,True
+PE0014,ANON_941,grading,excavator,blade,moderate,Single-pass technique on firm dry soil,0.746,0.755,True,True
+PE0015,ANON_310,loading,grader,ripper,moderate,Sequential loading pattern minimises repositioning,0.636,0.959,True,True
+PE0016,ANON_782,trenching,grader,blade,moderate,Consistent depth control reduces rework passes,0.848,0.832,True,True
+PE0017,ANON_108,stockpiling,excavator,ripper,moderate,Layered placement reduces rehandling effort,0.715,0.933,True,True
+PE0018,ANON_217,grading,excavator,ripper,difficult,Single-pass technique on firm dry soil,0.764,0.861,True,True
+PE0019,ANON_137,stockpiling,dozer,hammer,difficult,Layered placement reduces rehandling effort,0.936,0.835,False,True
+PE0020,ANON_138,loading,hauler,grapple,easy,Sequential loading pattern minimises repositioning,0.72,0.803,False,True
+PE0021,ANON_668,trenching,loader,bucket,difficult,Consistent depth control reduces rework passes,0.907,0.97,True,True
+PE0022,ANON_740,hauling,excavator,hammer,difficult,Steady speed on grade optimises fuel per tonne-km,0.755,0.992,False,True
+PE0023,ANON_531,grading,hauler,blade,easy,Single-pass technique on firm dry soil,0.615,0.76,True,True
+PE0024,ANON_868,stockpiling,hauler,bucket,difficult,Layered placement reduces rehandling effort,0.674,0.786,False,True
+PE0025,ANON_986,grading,hauler,blade,moderate,Single-pass technique on firm dry soil,0.74,0.898,False,True
+PE0026,ANON_351,hauling,hauler,bucket,moderate,Steady speed on grade optimises fuel per tonne-km,0.65,0.619,True,True
+PE0027,ANON_365,trenching,hauler,ripper,difficult,Consistent depth control reduces rework passes,0.707,0.766,True,True
+PE0028,ANON_917,stockpiling,loader,bucket,easy,Layered placement reduces rehandling effort,0.851,0.581,True,True
+PE0029,ANON_567,trenching,loader,grapple,easy,Consistent depth control reduces rework passes,0.631,0.505,True,True
+PE0030,ANON_218,excavation,loader,blade,difficult,Optimal bucket fill angle reduces cycle time by ~12%,0.851,0.94,True,True
+PE0031,ANON_247,trenching,loader,blade,difficult,Consistent depth control reduces rework passes,0.666,0.676,False,True
+PE0032,ANON_490,stockpiling,excavator,grapple,moderate,Layered placement reduces rehandling effort,0.924,0.922,True,True
+PE0033,ANON_782,loading,grader,ripper,moderate,Sequential loading pattern minimises repositioning,0.66,0.732,True,True
+PE0034,ANON_477,excavation,grader,ripper,easy,Optimal bucket fill angle reduces cycle time by ~12%,0.738,0.681,True,True
+PE0035,ANON_819,trenching,excavator,grapple,difficult,Consistent depth control reduces rework passes,0.649,0.753,True,True
+PE0036,ANON_431,loading,grader,hammer,difficult,Sequential loading pattern minimises repositioning,0.826,0.878,True,True
+PE0037,ANON_434,trenching,hauler,blade,moderate,Consistent depth control reduces rework passes,0.622,0.991,True,True
+PE0038,ANON_717,excavation,excavator,blade,difficult,Optimal bucket fill angle reduces cycle time by ~12%,0.88,0.602,False,True
+PE0039,ANON_626,grading,grader,bucket,difficult,Single-pass technique on firm dry soil,0.936,0.859,True,True
+PE0040,ANON_163,hauling,hauler,grapple,easy,Steady speed on grade optimises fuel per tonne-km,0.773,0.709,True,True
+PE0041,ANON_129,excavation,grader,grapple,moderate,Optimal bucket fill angle reduces cycle time by ~12%,0.644,0.55,True,True
+PE0042,ANON_719,trenching,grader,bucket,easy,Consistent depth control reduces rework passes,0.697,0.855,True,True
+PE0043,ANON_832,hauling,hauler,bucket,difficult,Steady speed on grade optimises fuel per tonne-km,0.841,0.655,False,True
+PE0044,ANON_602,loading,loader,grapple,difficult,Sequential loading pattern minimises repositioning,0.697,0.693,False,True
+PE0045,ANON_523,trenching,grader,blade,easy,Consistent depth control reduces rework passes,0.851,0.785,True,True
+PE0046,ANON_477,loading,grader,hammer,difficult,Sequential loading pattern minimises repositioning,0.634,0.716,True,True
+PE0047,ANON_575,stockpiling,dozer,blade,moderate,Layered placement reduces rehandling effort,0.867,0.512,True,True
+PE0048,ANON_713,trenching,excavator,bucket,difficult,Consistent depth control reduces rework passes,0.887,0.606,True,True
+PE0049,ANON_778,loading,loader,hammer,moderate,Sequential loading pattern minimises repositioning,0.738,0.684,False,True
+PE0050,ANON_720,excavation,loader,hammer,difficult,Optimal bucket fill angle reduces cycle time by ~12%,0.673,0.909,True,True
+PE0051,ANON_818,grading,excavator,bucket,moderate,Single-pass technique on firm dry soil,0.778,0.519,True,True
+PE0052,ANON_917,stockpiling,hauler,blade,easy,Layered placement reduces rehandling effort,0.845,0.722,True,True
+PE0053,ANON_801,excavation,loader,hammer,difficult,Optimal bucket fill angle reduces cycle time by ~12%,0.921,0.969,True,True
+PE0054,ANON_129,grading,loader,hammer,difficult,Single-pass technique on firm dry soil,0.638,0.553,False,True
+PE0055,ANON_436,grading,dozer,bucket,easy,Single-pass technique on firm dry soil,0.837,0.536,True,True
+PE0056,ANON_776,hauling,excavator,bucket,difficult,Steady speed on grade optimises fuel per tonne-km,0.769,0.719,True,True
+PE0057,ANON_413,excavation,dozer,blade,difficult,Optimal bucket fill angle reduces cycle time by ~12%,0.635,0.548,False,True
+PE0058,ANON_240,loading,dozer,grapple,difficult,Sequential loading pattern minimises repositioning,0.698,0.981,True,True
+PE0059,ANON_345,excavation,loader,blade,difficult,Optimal bucket fill angle reduces cycle time by ~12%,0.748,0.987,True,True
+PE0060,ANON_844,stockpiling,loader,hammer,difficult,Layered placement reduces rehandling effort,0.799,0.769,True,True
+PE0061,ANON_916,stockpiling,excavator,hammer,easy,Layered placement reduces rehandling effort,0.927,0.551,True,True
+PE0062,ANON_696,loading,dozer,grapple,moderate,Sequential loading pattern minimises repositioning,0.949,0.811,False,True
+PE0063,ANON_818,trenching,hauler,ripper,difficult,Consistent depth control reduces rework passes,0.717,0.83,True,True
+PE0064,ANON_524,trenching,dozer,grapple,easy,Consistent depth control reduces rework passes,0.898,0.544,False,True
+PE0065,ANON_918,hauling,excavator,blade,difficult,Steady speed on grade optimises fuel per tonne-km,0.715,0.68,False,True
+PE0066,ANON_315,grading,grader,ripper,moderate,Single-pass technique on firm dry soil,0.794,0.698,True,True
+PE0067,ANON_507,grading,loader,blade,difficult,Single-pass technique on firm dry soil,0.928,0.873,True,True
+PE0068,ANON_840,excavation,grader,blade,moderate,Optimal bucket fill angle reduces cycle time by ~12%,0.931,0.569,True,True
+PE0069,ANON_157,grading,excavator,blade,easy,Single-pass technique on firm dry soil,0.881,0.601,True,True
+PE0070,ANON_898,hauling,excavator,blade,difficult,Steady speed on grade optimises fuel per tonne-km,0.703,0.991,True,True
+PE0071,ANON_620,excavation,grader,hammer,moderate,Optimal bucket fill angle reduces cycle time by ~12%,0.707,0.808,True,True
+PE0072,ANON_536,grading,grader,bucket,easy,Single-pass technique on firm dry soil,0.766,0.845,False,True
+PE0073,ANON_172,stockpiling,excavator,blade,difficult,Layered placement reduces rehandling effort,0.672,0.614,True,True
+PE0074,ANON_371,hauling,dozer,bucket,difficult,Steady speed on grade optimises fuel per tonne-km,0.899,0.655,True,True
+PE0075,ANON_430,hauling,hauler,grapple,difficult,Steady speed on grade optimises fuel per tonne-km,0.728,0.629,True,True
+PE0076,ANON_431,hauling,grader,grapple,moderate,Steady speed on grade optimises fuel per tonne-km,0.631,0.86,False,True
+PE0077,ANON_377,excavation,grader,grapple,difficult,Optimal bucket fill angle reduces cycle time by ~12%,0.614,0.938,True,True
+PE0078,ANON_837,hauling,loader,blade,difficult,Steady speed on grade optimises fuel per tonne-km,0.607,0.602,True,True
+PE0079,ANON_542,hauling,hauler,ripper,moderate,Steady speed on grade optimises fuel per tonne-km,0.666,0.55,True,True
+PE0080,ANON_306,loading,loader,hammer,moderate,Sequential loading pattern minimises repositioning,0.923,0.543,True,True
+PE0081,ANON_406,loading,dozer,hammer,difficult,Sequential loading pattern minimises repositioning,0.656,0.603,True,True
+PE0082,ANON_309,stockpiling,dozer,grapple,easy,Layered placement reduces rehandling effort,0.859,0.663,True,True
+PE0083,ANON_457,hauling,hauler,grapple,difficult,Steady speed on grade optimises fuel per tonne-km,0.705,0.902,True,True
+PE0084,ANON_149,trenching,grader,blade,moderate,Consistent depth control reduces rework passes,0.617,0.844,True,True
+PE0085,ANON_212,hauling,hauler,ripper,moderate,Steady speed on grade optimises fuel per tonne-km,0.839,0.521,True,True
+PE0086,ANON_645,hauling,hauler,bucket,difficult,Steady speed on grade optimises fuel per tonne-km,0.729,0.554,True,True
+PE0087,ANON_149,hauling,dozer,blade,easy,Steady speed on grade optimises fuel per tonne-km,0.633,0.875,False,True
+PE0088,ANON_228,loading,dozer,blade,difficult,Sequential loading pattern minimises repositioning,0.826,0.933,True,True
+PE0089,ANON_887,hauling,dozer,ripper,moderate,Steady speed on grade optimises fuel per tonne-km,0.689,0.679,False,True
+PE0090,ANON_106,hauling,loader,bucket,difficult,Steady speed on grade optimises fuel per tonne-km,0.8,0.961,False,True
+PE0091,ANON_959,grading,excavator,grapple,difficult,Single-pass technique on firm dry soil,0.701,0.512,False,True
+PE0092,ANON_650,excavation,loader,blade,difficult,Optimal bucket fill angle reduces cycle time by ~12%,0.939,0.913,True,True
+PE0093,ANON_974,hauling,loader,bucket,moderate,Steady speed on grade optimises fuel per tonne-km,0.935,0.738,True,True
+PE0094,ANON_976,hauling,dozer,hammer,moderate,Steady speed on grade optimises fuel per tonne-km,0.659,0.757,True,True
+PE0095,ANON_316,loading,grader,hammer,difficult,Sequential loading pattern minimises repositioning,0.693,0.668,False,True
+PE0096,ANON_334,hauling,dozer,blade,difficult,Steady speed on grade optimises fuel per tonne-km,0.857,0.603,True,True
+PE0097,ANON_929,stockpiling,grader,ripper,moderate,Layered placement reduces rehandling effort,0.933,0.638,True,True
+PE0098,ANON_959,excavation,grader,grapple,easy,Optimal bucket fill angle reduces cycle time by ~12%,0.608,0.845,False,True
+PE0099,ANON_111,loading,grader,blade,easy,Sequential loading pattern minimises repositioning,0.739,0.5,True,True
+PE0100,ANON_406,trenching,excavator,hammer,moderate,Consistent depth control reduces rework passes,0.762,0.653,True,True
+PE0101,ANON_955,trenching,loader,hammer,difficult,Consistent depth control reduces rework passes,0.826,0.549,False,True
+PE0102,ANON_608,excavation,hauler,grapple,difficult,Optimal bucket fill angle reduces cycle time by ~12%,0.785,0.857,True,True
+PE0103,ANON_989,stockpiling,loader,bucket,moderate,Layered placement reduces rehandling effort,0.916,0.603,False,True
+PE0104,ANON_748,stockpiling,dozer,hammer,difficult,Layered placement reduces rehandling effort,0.784,0.876,True,True
+PE0105,ANON_929,hauling,grader,bucket,moderate,Steady speed on grade optimises fuel per tonne-km,0.639,0.612,True,True
+PE0106,ANON_475,hauling,grader,grapple,difficult,Steady speed on grade optimises fuel per tonne-km,0.88,0.977,True,True
+PE0107,ANON_589,grading,grader,bucket,difficult,Single-pass technique on firm dry soil,0.832,0.77,True,True
+PE0108,ANON_469,hauling,excavator,grapple,difficult,Steady speed on grade optimises fuel per tonne-km,0.728,0.512,True,True
+PE0109,ANON_514,loading,hauler,ripper,moderate,Sequential loading pattern minimises repositioning,0.778,0.703,True,True
+PE0110,ANON_400,excavation,hauler,ripper,easy,Optimal bucket fill angle reduces cycle time by ~12%,0.71,0.611,True,True
+PE0111,ANON_944,stockpiling,loader,grapple,moderate,Layered placement reduces rehandling effort,0.791,0.531,True,True
+PE0112,ANON_444,grading,grader,hammer,moderate,Single-pass technique on firm dry soil,0.935,0.648,True,True
+PE0113,ANON_378,trenching,dozer,ripper,easy,Consistent depth control reduces rework passes,0.682,0.86,False,True
+PE0114,ANON_645,hauling,loader,ripper,easy,Steady speed on grade optimises fuel per tonne-km,0.743,0.694,False,True
+PE0115,ANON_460,loading,dozer,ripper,moderate,Sequential loading pattern minimises repositioning,0.722,0.59,True,True
+PE0116,ANON_606,trenching,grader,bucket,moderate,Consistent depth control reduces rework passes,0.657,0.897,False,True
+PE0117,ANON_772,loading,dozer,ripper,moderate,Sequential loading pattern minimises repositioning,0.815,0.613,True,True
+PE0118,ANON_822,grading,loader,ripper,moderate,Single-pass technique on firm dry soil,0.654,0.772,True,True
+PE0119,ANON_191,trenching,hauler,blade,moderate,Consistent depth control reduces rework passes,0.754,0.688,True,True
+PE0120,ANON_820,stockpiling,loader,blade,difficult,Layered placement reduces rehandling effort,0.609,0.506,True,True
+PE0121,ANON_498,excavation,dozer,bucket,easy,Optimal bucket fill angle reduces cycle time by ~12%,0.873,0.916,True,True
+PE0122,ANON_664,stockpiling,hauler,grapple,moderate,Layered placement reduces rehandling effort,0.815,0.917,True,True
+PE0123,ANON_677,stockpiling,excavator,blade,easy,Layered placement reduces rehandling effort,0.929,0.978,True,True
+PE0124,ANON_738,loading,hauler,blade,moderate,Sequential loading pattern minimises repositioning,0.608,0.575,True,True
+PE0125,ANON_478,trenching,excavator,grapple,moderate,Consistent depth control reduces rework passes,0.815,0.583,True,True
+PE0126,ANON_611,loading,hauler,blade,easy,Sequential loading pattern minimises repositioning,0.831,0.666,False,True
+PE0127,ANON_491,stockpiling,dozer,blade,difficult,Layered placement reduces rehandling effort,0.823,0.55,True,True
+PE0128,ANON_282,trenching,loader,hammer,difficult,Consistent depth control reduces rework passes,0.884,0.881,False,True
+PE0129,ANON_119,hauling,loader,ripper,easy,Steady speed on grade optimises fuel per tonne-km,0.927,0.594,False,True
+PE0130,ANON_665,excavation,dozer,bucket,easy,Optimal bucket fill angle reduces cycle time by ~12%,0.755,0.592,True,True
+PE0131,ANON_554,loading,hauler,hammer,difficult,Sequential loading pattern minimises repositioning,0.71,0.856,True,True
+PE0132,ANON_312,loading,dozer,hammer,difficult,Sequential loading pattern minimises repositioning,0.922,0.654,True,True
+PE0133,ANON_178,grading,dozer,bucket,easy,Single-pass technique on firm dry soil,0.657,0.719,True,True
+PE0134,ANON_719,loading,dozer,ripper,moderate,Sequential loading pattern minimises repositioning,0.653,0.632,False,True
+PE0135,ANON_304,hauling,dozer,ripper,moderate,Steady speed on grade optimises fuel per tonne-km,0.636,0.587,True,True
+PE0136,ANON_956,loading,dozer,grapple,difficult,Sequential loading pattern minimises repositioning,0.846,0.613,True,True
+PE0137,ANON_216,grading,dozer,ripper,easy,Single-pass technique on firm dry soil,0.845,0.737,False,True
+PE0138,ANON_945,grading,excavator,blade,moderate,Single-pass technique on firm dry soil,0.753,0.755,True,True
+PE0139,ANON_957,stockpiling,excavator,grapple,easy,Layered placement reduces rehandling effort,0.799,0.771,False,True
+PE0140,ANON_786,loading,loader,hammer,easy,Sequential loading pattern minimises repositioning,0.703,0.781,True,True
+PE0141,ANON_260,excavation,loader,blade,difficult,Optimal bucket fill angle reduces cycle time by ~12%,0.645,0.87,True,True
+PE0142,ANON_122,grading,loader,hammer,easy,Single-pass technique on firm dry soil,0.877,0.578,True,True
+PE0143,ANON_848,loading,grader,grapple,moderate,Sequential loading pattern minimises repositioning,0.753,0.699,True,True
+PE0144,ANON_601,loading,loader,grapple,moderate,Sequential loading pattern minimises repositioning,0.791,0.942,False,True
+PE0145,ANON_421,hauling,dozer,grapple,moderate,Steady speed on grade optimises fuel per tonne-km,0.666,0.602,True,True
+PE0146,ANON_428,hauling,excavator,grapple,moderate,Steady speed on grade optimises fuel per tonne-km,0.652,0.632,False,True
+PE0147,ANON_814,hauling,grader,grapple,moderate,Steady speed on grade optimises fuel per tonne-km,0.665,0.663,True,True
+PE0148,ANON_982,excavation,dozer,hammer,easy,Optimal bucket fill angle reduces cycle time by ~12%,0.908,0.877,True,True
+PE0149,ANON_598,stockpiling,dozer,grapple,moderate,Layered placement reduces rehandling effort,0.771,0.55,True,True
+PE0150,ANON_265,loading,loader,bucket,moderate,Sequential loading pattern minimises repositioning,0.603,0.664,False,True

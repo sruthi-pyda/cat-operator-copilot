@@ -1,0 +1,8 @@
+example_id,source_operator_anonymized_id,task_type,machine_type,attachment_type,site_condition,technique_description,observed_metric,context_similarity_score,approved_for_peer_learning,synthetic_flag
+PE0001,ANON_A1,grading,excavator,bucket,wet,Work in shallower passes when the surface is wet rather than forcing a full-depth cut.,cycle_time_sec=41.2,0.92,True,True
+PE0002,ANON_B2,grading,excavator,bucket,dry,Keep the blade loaded through the turn instead of lifting and repositioning.,cycle_time_sec=38.9,0.74,True,True
+PE0003,ANON_C3,grading,excavator,bucket,wet,Stage spoil closer to the cut to shorten the return swing.,idle_ratio=0.09,0.61,True,True
+PE0004,ANON_D4,grading,excavator,bucket,wet,Unapproved technique that must never be surfaced.,cycle_time_sec=30.0,0.99,False,True
+PE0005,ANON_E5,grading,excavator,bucket,wet,Barely related example below the similarity floor.,idle_ratio=0.2,0.21,True,True
+PE0006,ANON_F6,excavation,excavator,bucket,wet,Different task type entirely.,cycle_time_sec=52.0,0.88,True,True
+PE0007,ANON_G7,grading,dozer,blade,wet,Different machine type entirely.,cycle_time_sec=44.0,0.85,True,True

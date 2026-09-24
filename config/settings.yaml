@@ -15,6 +15,10 @@ biometric:
   face_confidence_threshold: 0.70   # Minimum confidence to authenticate
   face_model: "ArcFace"
   face_backend: "deepface"
+  # Detector, not recogniser. Measured on 6 real webcam frames: opencv and ssd
+  # found a face in 0/6, retinaface and mtcnn in 6/6. opencv is the DeepFace
+  # default and is not reliable enough for registration (D032).
+  face_detector_backend: "retinaface"
   registration_image_dir: "data/face_registrations"
   keep_images_local: true
 
@@ -28,6 +32,54 @@ models:
 attention:
   max_queue_size: 10
   bundle_window_sec: 30            # Bundle non-critical events within this window
+  # Tier order from docs/ARCHITECTURE.md (first = most urgent)
+  priority_order:
+    - critical_safety
+    - high_safety
+    - task_replanning
+    - behavior_nudge
+    - training
+    - buddy
+  min_confidence: 0.50             # Non-safety events below this are suppressed
+  routes:                          # tier → subsystem that renders it
+    critical_safety: safety_guardian
+    high_safety: safety_guardian
+    task_replanning: dashboard
+    behavior_nudge: behavior
+    training: training_hub
+    buddy: buddy
+
+optimization:
+  # Synthetic task deadlines fall in Jan 2026; plans default to this start time.
+  plan_start: "2026-01-01T06:00:00"
+  candidate_pool_size: 30          # Top-N open tasks (by priority, then deadline) scored per run
+  # Weighted-sum objective (cost units ≈ machine-minutes). Lower is better.
+  weights:
+    time_per_min: 1.0              # ETA P50 minutes
+    fuel_per_l: 2.0                # Fuel P50 litres
+    deadline_miss: 120.0           # P50 finish after deadline
+    deadline_at_risk: 40.0         # P90 finish after deadline (P50 on time)
+    deadline_late_per_hour: 5.0    # Additional per hour late (P50)
+    transition_per_km: 7.5         # ~8 km/h machine travel
+    attachment_swap: 20.0          # Minutes to change attachment
+    blocked_route: 15.0            # Detour penalty for blocked/partially blocked routes
+  safety_severity_cost:            # Safety Guardian findings for the planned context
+    INFO: 0
+    LOW: 2
+    MEDIUM: 10
+    HIGH: 30                       # CRITICAL is a hard block, not a cost
+  skill_bonus:                     # Applied to time_cost only; no-match is neutral (x1.0), never a penalty
+    time_cost_multiplier: 0.8      # 20 % bonus when operator task skill matches the task
+    specialized_levels: [advanced] # Tasks requiring these levels count as specialised...
+    specialized_match_levels: [expert]  # ...and only these operator levels match them
+    specialized_only: true         # true: bonus only for experts on specialised tasks (D046)
+                                   # false: also for any operator meeting a non-specialised task's level
+  priority_factor:                 # Score = total_cost / factor (priority 1 = highest)
+    1: 2.0
+    2: 1.6
+    3: 1.3
+    4: 1.1
+    5: 1.0
 
 buddy:
   safe_states_required:            # Machine must be in one of these for Buddy to activate
@@ -35,7 +87,27 @@ buddy:
     - safe_idle
   no_attachment_movement_required: true
   max_evidence_age_min: 60         # Evidence older than this is flagged as stale
+  llm_synthesis: true              # Phrase multiple agreeing evidence items with local LLM (features/llm); off if missing
+
+llm:
+  # Local-only Ollama (features/llm/ollama_client.py). Language tasks only - never safety decisions.
+  model: "mistral:latest"
+  host: "http://localhost:11434"   # must be loopback; non-local hosts are rejected
+  timeout_sec: 30
+  recheck_interval_sec: 60         # how often to retry after falling back
+  temperature: 0.2
+  max_tokens: 256
 
 logging:
   level: "INFO"
   log_dir: "logs"
+
+training:
+  content_dir: "features/training/content"
+  history_window: 10                 # Only the most recent N behaviour results are considered
+  min_occurrences: 2                 # A one-off is never coached; the issue must repeat
+  min_confidence: 0.70               # Attribution confidence floor for an occurrence to count
+  max_context_share: 0.50            # Site/machine/weather may explain at most this share of the gap
+  quiz_pass_score: 0.80              # Fraction of questions correct required to pass
+  improvement_target_pct: 10.0       # Measured improvement that closes the coaching loop
+  escalate_after_triggers: 2         # Prior triggers for the same issue before state is 'escalated'

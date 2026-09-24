@@ -1,0 +1,121 @@
+# Approved manual snippets for the Grounded Buddy.
+#
+# SYNTHETIC CONTENT. This is generic heavy-equipment operating guidance written
+# for this student prototype. It is NOT Caterpillar documentation, is not drawn
+# from any real machine manual, and must never be presented as either. On a real
+# deployment this file would be replaced by snippets approved by the equipment
+# owner's safety team.
+#
+# The Buddy treats these as the highest-authority source after a Safety Guardian
+# incident, so everything here must be conservative: where guidance would depend
+# on the specific machine or site, the snippet says to defer rather than guess.
+
+meta:
+  source: synthetic
+  synthetic_flag: true
+  authority: approved_manual
+  notice: >-
+    Illustrative operating guidance written for this prototype. Not Caterpillar
+    documentation and not a substitute for an approved machine manual.
+
+snippets:
+  - snippet_id: M001
+    topic: swing_zone
+    title: Swing zone awareness
+    keywords: [swing, slew, rotate, rotating, envelope, tail, counterweight, boom]
+    content: >-
+      Before swinging, confirm the full arc is clear, including behind the machine
+      where the counterweight travels. The tail swing reaches beyond the tracks, so
+      a person standing clear of the front can still be inside the swing path. If
+      anyone is inside the arc, stop and wait for them to move clear and acknowledge
+      you before resuming.
+
+  - snippet_id: M002
+    topic: worker_proximity
+    title: People working near the machine
+    keywords: [worker, person, people, proximity, nearby, ground crew, spotter, distance]
+    content: >-
+      Nearness alone does not decide risk: a person standing still outside the
+      movement envelope is not in the same situation as a person walking into it.
+      Establish eye contact or a spotter before any movement while someone is close,
+      and stop the moment you lose sight of them.
+
+  - snippet_id: M003
+    topic: seatbelt
+    title: Seat belt use
+    keywords: [seatbelt, seat belt, belt, restraint, buckle]
+    content: >-
+      Wear the seat belt whenever the engine is running. In a roll-over or sudden
+      stop the cab protects an operator who stayed inside it; the belt is what keeps
+      you there. Fasten it before starting and leave it fastened until the machine is
+      parked and shut down.
+
+  - snippet_id: M004
+    topic: safe_shutdown
+    title: Parking and safe shutdown
+    # Keywords are specific on purpose: a bare "stop" would pull this snippet
+    # into unrelated safety questions (see the note on M009).
+    keywords: [park, parking, shutdown, shut down, stop the machine, stopping procedure, secure the machine, leave the machine]
+    content: >-
+      To leave the machine safely: move to level ground where possible, lower the
+      attachment fully to the ground, set the controls to neutral and engage the lock,
+      allow the engine to idle before shutting down, then remove the key. Never leave
+      an attachment raised while the cab is unattended.
+
+  - snippet_id: M005
+    topic: blind_zones
+    title: Blind zones and visibility
+    keywords: [blind, blind spot, blind zone, visibility, mirror, camera, see, dust, fog, dark, night]
+    content: >-
+      Every machine has areas the operator cannot see from the seat, and they grow in
+      dust, rain or darkness. Mirrors and cameras reduce the blind zones but do not
+      remove them. If visibility drops below what the task needs, stop and re-establish
+      contact with the ground crew rather than continuing on memory of where people were.
+
+  - snippet_id: M006
+    topic: slope_travel
+    title: Working and travelling on slopes
+    keywords: [slope, gradient, incline, hill, bank, tip, tipping, rollover, roll over, stability]
+    content: >-
+      Travel up and down a slope rather than across it, keep the attachment low to
+      lower the centre of gravity, and avoid turning on a grade. Loose, wet or recently
+      disturbed ground reduces the safe angle well below the machine's rated limit, so
+      treat the rating as a ceiling and not a target.
+
+  - snippet_id: M007
+    topic: load_handling
+    title: Lifting and carrying a load
+    keywords: [load, lift, lifting, carry, carrying, bucket, hoist, suspended]
+    content: >-
+      Never move or swing a load over a person. Keep the load low while travelling,
+      accelerate and stop gradually so it does not swing, and confirm the ground can
+      take the machine before positioning. If the weight or the lift geometry is
+      uncertain, stop and confirm against the machine's rated capacity.
+
+  - snippet_id: M008
+    topic: refuelling
+    title: Refuelling
+    # NOT a bare "fuel": this snippet is about the refuelling procedure, not the
+    # fuel level. "How much fuel is left" is an operational question telemetry
+    # answers, and because the manual outranks telemetry a bare keyword here made
+    # the Buddy reply with refuelling safety guidance and report a spurious
+    # conflict between two sources answering different questions.
+    keywords: [refuel, refuelling, refueling, fill the tank, filling the tank, fuel spill]
+    content: >-
+      Shut the engine down and let it cool before refuelling. No smoking or open flame
+      near the fill point, and keep the nozzle in contact with the filler neck to avoid
+      static discharge. Clean up any spill before restarting.
+
+  - snippet_id: M009
+    topic: emergency_stop
+    title: When something goes wrong
+    # "danger" is deliberately NOT a keyword. It appears in almost every safety
+    # question, so it matched this snippet regardless of topic and the Buddy
+    # answered uncovered questions with emergency-stop guidance. A safety
+    # question the manual does not actually cover must defer instead.
+    keywords: [emergency, accident, injury, injured, incident, hurt, collision, strike, struck]
+    content: >-
+      If anyone may have been struck or injured, stop all movement immediately, lower
+      the attachment, shut down, and raise the alarm on the site channel before moving
+      the machine again. Do not reposition the machine to inspect the situation; move
+      the machine only when instructed by the person running the site response.

@@ -55,6 +55,7 @@ class SiteContext:
     route: Optional[str] = None
     work_zone_constraints: Optional[str] = None
     haul_distance: Optional[float] = None
+    congestion: Optional[str] = None
 
 
 @dataclass
@@ -143,6 +144,13 @@ class SafetyEvent:
     confidence: float
     timestamp: str
     synthetic_flag: bool
+    # Optional context (added by Safety Guardian; defaults keep older callers valid)
+    recommendation: str = ""
+    session_id: Optional[str] = None
+    operator_id: Optional[str] = None
+    machine_id: Optional[str] = None
+    rule_id: Optional[str] = None
+    evidence: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -152,10 +160,32 @@ class BehaviorResult:
     confidence: float
     observed_value: float
     expected_value: float
+    # UNIT CONTRACT: operator_residual and context_explained_component MUST be in the
+    # same units (both idle ratios). Never mix ratios with minutes or litres.
+    # Populated together in a single return statement — one cannot be set without the other.
     operator_residual: float
     context_explained_component: float
     coaching_eligible: bool
     synthetic_flag: bool
+
+    def context_share(self) -> float:
+        """
+        Fraction of the total behavioural gap explained by context (0–1).
+        Used by the Training Hub gate:
+            if context_share > 0.5: do NOT trigger coaching
+
+        Zero-gap rule: if both components are zero the operator deviated by
+        exactly nothing — there is no basis for attributing fault to them.
+        Returns 1.0 (context explains everything / insufficient evidence)
+        so the gate correctly suppresses coaching.
+        Returning 0.0 in this case would pass the "context isn't dominant"
+        check and make a zero-deviation session coachable — the opposite of
+        the intended protection (ref D040).
+        """
+        denom = abs(self.operator_residual) + abs(self.context_explained_component)
+        if denom < 1e-9:
+            return 1.0   # no gap → no operator fault → suppress coaching
+        return abs(self.context_explained_component) / denom
 
 
 @dataclass

@@ -1,0 +1,6 @@
+operator_id,name,role,years_experience,machine_skill_level,task_skill_level,authorized_machine_types,certification_status,certification_expiry,baseline_idle_ratio,baseline_cycle_time_sec,baseline_fuel_l_per_cycle,baseline_safety_event_rate,recent_workload_hours,fatigue_proxy,training_status,face_registered,face_embedding_path,face_model,data_source,synthetic_flag
+OP1003,Saanvi,operator,4.5,advanced,advanced,excavator|loader,valid,2027-12-31,0.14,38.0,0.42,0.01,32.0,0.21,current,true,data/face_registrations/OP1003,ArcFace,synthetic,true
+OP1004,Synthetic Operator 04,operator,1.2,novice,novice,dozer,valid,2027-06-30,0.27,52.0,0.61,0.04,12.0,0.44,pending,false,,,synthetic,true
+OP1005,Synthetic Operator 05,operator,8.0,expert,expert,excavator|dozer,valid,2024-01-15,0.11,34.0,0.38,0.01,40.0,0.18,current,false,,,synthetic,true
+OP1006,Synthetic Operator 06,operator,3.0,intermediate,intermediate,excavator,suspended,2027-01-01,0.19,44.0,0.50,0.02,25.0,0.30,overdue,false,,,synthetic,true
+OP1007,Synthetic Operator 07,operator,6.0,advanced,advanced,excavator,valid,,0.15,39.0,0.44,0.01,28.0,0.22,current,false,,,synthetic,true

@@ -1,0 +1,17 @@
+# Native Streamlit widgets (buttons, sliders, tabs, selectboxes) read these, so
+# they inherit the Command Deck palette instead of clashing with the injected CSS.
+# Keep in sync with the :root custom properties in app/ui/dashboard.py.
+
+[theme]
+base = "dark"
+backgroundColor = "#171A1C"          # graphite, not black
+secondaryBackgroundColor = "#202428" # panel surface
+textColor = "#EDEDE9"                # off-white
+primaryColor = "#F2B544"             # muted CAT amber - active state only
+font = "sans serif"
+
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false
