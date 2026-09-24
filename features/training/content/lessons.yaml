@@ -25,7 +25,7 @@ lessons:
     quiz_id: "Q001"
     # Optional: a file in content/media/ (e.g. media/seatbelt.mp4) or a URL.
     # Empty means no video; the Training Hub says so rather than showing a broken player.
-    video_url: ""
+    video_url: "L001.webm"
     summary: >-
       A rollover or sudden stop moves the operator before it moves the cab.
       The belt keeps you inside the protective structure, which is the only
@@ -52,7 +52,7 @@ lessons:
     quiz_id: "Q002"
     # Optional: a file in content/media/ (e.g. media/seatbelt.mp4) or a URL.
     # Empty means no video; the Training Hub says so rather than showing a broken player.
-    video_url: ""
+    video_url: "L002.webm"
     summary: >-
       The tail swing and the working envelope are larger than they feel from the
       seat, and a person inside them cannot be made safe by reflexes alone.
@@ -79,7 +79,7 @@ lessons:
     quiz_id: "Q003"
     # Optional: a file in content/media/ (e.g. media/seatbelt.mp4) or a URL.
     # Empty means no video; the Training Hub says so rather than showing a broken player.
-    video_url: ""
+    video_url: "L003.webm"
     summary: >-
       Idle time burns fuel and engine hours while producing nothing. Most of it
       is waiting that could be shortened, not work that has to happen.
@@ -106,7 +106,7 @@ lessons:
     quiz_id: "Q004"
     # Optional: a file in content/media/ (e.g. media/seatbelt.mp4) or a URL.
     # Empty means no video; the Training Hub says so rather than showing a broken player.
-    video_url: ""
+    video_url: "L004.webm"
     summary: >-
       A shorter, smoother cycle moves more material per litre of fuel and puts
       less wear on the machine than a faster, harder one.
