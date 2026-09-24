@@ -464,4 +464,18 @@ if result.context_share() > 0.5:
 
 ---
 
+## D040 — Operator IDs reassigned: Saanvi is OP1001
+
+**Decision (2026-09-24):** `SAANVI → OP1001`, `SRUTHI → OP1002`, `ANEESHA → OP1003`. The dev plan's original order is superseded.
+
+**Reason:** OP1001 is the identity the generator shapes with a coachable idle pattern, so it is the only operator whose Safety → Behavior → Training loop fires end to end. Whoever demonstrates the loop has to be OP1001, and Saanvi's face is enrolled there.
+
+**Nothing breaks.** `shared/constants.py::OPERATORS` is imported by no module — it is documentation. `operators.csv` uses generic names (`Operator_OP1001`), so no real identity is stored in the data. The only binding that matters is which face sits in `data/face_registrations/<id>/`.
+
+**Action for the team — important:** do **not** register a second face against OP1001. Re-registering that id overwrites the enrolled embeddings and the demo login stops resolving to the intended person. Sruthi registers as **OP1002**, Aneesha as **OP1003**.
+
+**Note for the demo:** because OP1001 is the coachable operator, the training loop shows the presenter being coached. That is deliberate and preferable to implying a teammate underperforms.
+
+---
+
 _Add new decisions here as they arise. Do not silently make assumptions._
